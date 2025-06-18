@@ -1,0 +1,389 @@
+import { Response } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { AuthenticatedRequest } from '@/types';
+import { CustomError } from '@/shared/middleware/error-handler';
+import { parsePaginationQuery, createPaginationResponse } from '@/utils/pagination';
+import { validateRequiredFields } from '@/utils/validation';
+
+const prisma = new PrismaClient();
+
+export class PersonnelController {
+  static async getAllPersonnel(req: AuthenticatedRequest, res: Response) {
+    const pagination = parsePaginationQuery(req.query);
+    const { search, department, status } = req.query;
+
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { first_name: { contains: search as string, mode: 'insensitive' } },
+        { last_name: { contains: search as string, mode: 'insensitive' } },
+        { middle_name: { contains: search as string, mode: 'insensitive' } },
+        { designation: { contains: search as string, mode: 'insensitive' } }
+      ];
+    }
+
+    if (department) {
+      where.department_id = department;
+    }
+
+    if (status) {
+      where.user = { status: status as string };
+    }
+
+    const [personnel, total] = await Promise.all([
+      prisma.personnel.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              status: true
+            }
+          },
+          department: {
+            select: {
+              id: true,
+              department_name: true
+            }
+          }
+        },
+        skip: pagination.skip,
+        take: pagination.limit,
+        orderBy: {
+          [pagination.sortBy]: pagination.sortOrder
+        }
+      }),
+      prisma.personnel.count({ where })
+    ]);
+
+    const response = createPaginationResponse(
+      personnel,
+      total,
+      pagination.page,
+      pagination.limit
+    );
+
+    res.json({
+      success: true,
+      data: response.data,
+      pagination: response.pagination
+    });
+  }
+
+  static async getPersonnelById(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+
+    const personnel = await prisma.personnel.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            status: true,
+            created_at: true,
+            updated_at: true
+          }
+        },
+        department: {
+          select: {
+            id: true,
+            department_name: true,
+            description: true
+          }
+        },
+        employment_history: true,
+        personnel_schedules: {
+          include: {
+            work_schedule: true
+          }
+        },
+        leave_balances: {
+          include: {
+            leave_type: true
+          }
+        },
+        loan_records: true,
+        performance_reviews: {
+          include: {
+            reviewer: {
+              select: {
+                id: true,
+                username: true,
+                personnel: {
+                  select: {
+                    first_name: true,
+                    last_name: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!personnel) {
+      throw new CustomError('Personnel not found', 404);
+    }
+
+    res.json({
+      success: true,
+      data: personnel
+    });
+  }
+
+  static async createPersonnel(req: AuthenticatedRequest, res: Response) {
+    const {
+      username,
+      email,
+      password,
+      first_name,
+      last_name,
+      middle_name,
+      date_of_birth,
+      gender,
+      civil_status,
+      contact_number,
+      address,
+      department_id,
+      designation,
+      employment_type,
+      date_hired,
+      salary,
+      gsis_number,
+      pagibig_number,
+      philhealth_number,
+      sss_number,
+      tin_number
+    } = req.body;
+
+    // Validate required fields
+    const requiredFields = [
+      'username', 'email', 'password', 'first_name', 'last_name',
+      'employment_type', 'date_hired', 'salary'
+    ];
+    const validationErrors = validateRequiredFields(req.body, requiredFields);
+    if (validationErrors.length > 0) {
+      throw new CustomError(`Validation failed: ${validationErrors.map(e => e.message).join(', ')}`, 400);
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ username }, { email }]
+      }
+    });
+
+    if (existingUser) {
+      throw new CustomError('Username or email already exists', 409);
+    }
+
+    // Create user and personnel in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create user
+      const user = await tx.user.create({
+        data: {
+          username,
+          email,
+          password_hash: password, // Note: Should hash password in production
+          status: 'Active'
+        }
+      });
+
+      // Create personnel
+      const personnel = await tx.personnel.create({
+        data: {
+          user_id: user.id,
+          first_name,
+          last_name,
+          middle_name,
+          date_of_birth: date_of_birth ? new Date(date_of_birth) : null,
+          gender,
+          civil_status,
+          contact_number,
+          address,
+          department_id,
+          designation,
+          employment_type,
+          date_hired: new Date(date_hired),
+          salary: parseFloat(salary),
+          gsis_number,
+          pagibig_number,
+          philhealth_number,
+          sss_number,
+          tin_number
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              status: true
+            }
+          },
+          department: {
+            select: {
+              id: true,
+              department_name: true
+            }
+          }
+        }
+      });
+
+      return personnel;
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Personnel created successfully',
+      data: result
+    });
+  }
+
+  static async updatePersonnel(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Check if personnel exists
+    const existingPersonnel = await prisma.personnel.findUnique({
+      where: { id }
+    });
+
+    if (!existingPersonnel) {
+      throw new CustomError('Personnel not found', 404);
+    }
+
+    // Update personnel
+    const updatedPersonnel = await prisma.personnel.update({
+      where: { id },
+      data: {
+        first_name: updateData.first_name,
+        last_name: updateData.last_name,
+        middle_name: updateData.middle_name,
+        date_of_birth: updateData.date_of_birth ? new Date(updateData.date_of_birth) : null,
+        gender: updateData.gender,
+        civil_status: updateData.civil_status,
+        contact_number: updateData.contact_number,
+        address: updateData.address,
+        department_id: updateData.department_id,
+        designation: updateData.designation,
+        employment_type: updateData.employment_type,
+        date_hired: updateData.date_hired ? new Date(updateData.date_hired) : null,
+        salary: updateData.salary ? parseFloat(updateData.salary) : undefined,
+        gsis_number: updateData.gsis_number,
+        pagibig_number: updateData.pagibig_number,
+        philhealth_number: updateData.philhealth_number,
+        sss_number: updateData.sss_number,
+        tin_number: updateData.tin_number
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            status: true
+          }
+        },
+        department: {
+          select: {
+            id: true,
+            department_name: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Personnel updated successfully',
+      data: updatedPersonnel
+    });
+  }
+
+  static async deletePersonnel(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+
+    // Check if personnel exists
+    const existingPersonnel = await prisma.personnel.findUnique({
+      where: { id }
+    });
+
+    if (!existingPersonnel) {
+      throw new CustomError('Personnel not found', 404);
+    }
+
+    // Delete personnel and user in a transaction
+    await prisma.$transaction(async (tx) => {
+      await tx.personnel.delete({
+        where: { id }
+      });
+
+      await tx.user.delete({
+        where: { id: existingPersonnel.user_id }
+      });
+    });
+
+    res.json({
+      success: true,
+      message: 'Personnel deleted successfully'
+    });
+  }
+
+  static async getPersonnelStats(req: AuthenticatedRequest, res: Response) {
+    const [
+      totalPersonnel,
+      activePersonnel,
+      inactivePersonnel,
+      departmentStats,
+      employmentTypeStats
+    ] = await Promise.all([
+      prisma.personnel.count(),
+      prisma.personnel.count({
+        where: {
+          user: { status: 'Active' }
+        }
+      }),
+      prisma.personnel.count({
+        where: {
+          user: { status: 'Inactive' }
+        }
+      }),
+      prisma.personnel.groupBy({
+        by: ['department_id'],
+        _count: {
+          id: true
+        },
+        where: {
+          user: { status: 'Active' }
+        }
+      }),
+      prisma.personnel.groupBy({
+        by: ['employment_type'],
+        _count: {
+          id: true
+        },
+        where: {
+          user: { status: 'Active' }
+        }
+      })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        total: totalPersonnel,
+        active: activePersonnel,
+        inactive: inactivePersonnel,
+        departmentStats,
+        employmentTypeStats
+      }
+    });
+  }
+} 
