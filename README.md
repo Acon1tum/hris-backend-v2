@@ -168,6 +168,46 @@ Authorization: Bearer <your-jwt-token>
 ### Other Modules
 Each module has its own set of endpoints following RESTful conventions.
 
+## 📑 Available APIs by Module
+
+### System Administration
+
+#### User Management
+| Method | Endpoint                                 | Description                                 |
+|--------|------------------------------------------|---------------------------------------------|
+| GET    | `/api/system/users`                      | List all users                              |
+| GET    | `/api/system/users/:id`                  | Get user details by ID                      |
+| POST   | `/api/system/users`                      | Create a new user                           |
+| PUT    | `/api/system/users/:id`                  | Update user details                         |
+| DELETE | `/api/system/users/:id`                  | Disable (soft delete) a user                |
+| PATCH  | `/api/system/users/:id/password`         | Change a user's password                    |
+| PATCH  | `/api/system/users/:id/roles`            | Assign roles to a user (replace all roles)  |
+
+#### Role Management
+| Method | Endpoint                                 | Description                                 |
+|--------|------------------------------------------|---------------------------------------------|
+| GET    | `/api/system/roles`                      | List all roles                              |
+| GET    | `/api/system/roles/:id`                  | Get role details by ID                      |
+| POST   | `/api/system/roles`                      | Create a new role                           |
+| PUT    | `/api/system/roles/:id`                  | Update role details                         |
+| DELETE | `/api/system/roles/:id`                  | Delete a role                               |
+| PATCH  | `/api/system/roles/:id/permissions`      | Assign permissions to a role (replace all)  |
+
+#### Permission Management
+| Method | Endpoint                                 | Description                                 |
+|--------|------------------------------------------|---------------------------------------------|
+| GET    | `/api/system/permissions`                | List all possible permissions (from enum)   |
+
+#### Audit Trail
+| Method | Endpoint                                 | Description                                 |
+|--------|------------------------------------------|---------------------------------------------|
+| GET    | `/api/system/audit-logs`                 | List audit logs (supports filters)          |
+| GET    | `/api/system/audit-logs/:id`             | Get details of a specific audit log         |
+
+---
+
+You can use these APIs with a valid JWT access token and the required permissions. See the earlier sections for usage examples and authentication details.
+
 ## 🔧 Development
 
 ### Available Scripts
