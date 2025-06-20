@@ -204,141 +204,66 @@ Each module has its own set of endpoints following RESTful conventions.
 | GET    | `/api/system/audit-logs`                 | List audit logs (supports filters)          |
 | GET    | `/api/system/audit-logs/:id`             | Get details of a specific audit log         |
 
----
+### Personnel Information Management Administration
 
-You can use these APIs with a valid JWT access token and the required permissions. See the earlier sections for usage examples and authentication details.
+#### Dashboard
+| Method | Endpoint                                 | Description                                 |
+|--------|------------------------------------------|---------------------------------------------|
+| GET    | `/api/personnel/dashboard`               | Get dashboard statistics and summaries       |
+
+#### Personnel 201 File
+| Method | Endpoint                                 | Description                                 |
+|--------|------------------------------------------|---------------------------------------------|
+| GET    | `/api/personnel`                         | List all personnel records                   |
+| POST   | `/api/personnel`                         | Create a new personnel record                |
+| GET    | `/api/personnel/:id`                     | Get personnel details by ID                   |
+| PUT    | `/api/personnel/:id`                     | Update personnel details                      |
+| DELETE | `/api/personnel/:id`                     | Archive/remove a personnel record             |
+
+##### Subsections (General Info, Employment, Membership, etc.)
+| Method | Endpoint                                                    | Description                                 |
+|--------|-------------------------------------------------------------|---------------------------------------------|
+| GET    | `/api/personnel/:id/employment-records`                     | Get employment records for personnel        |
+| POST   | `/api/personnel/:id/employment-records`                     | Add employment record                       |
+| GET    | `/api/personnel/:id/membership-data`                        | Get membership data (GSIS, Pag-Ibig, etc)   |
+| POST   | `/api/personnel/:id/membership-data`                        | Add membership data                         |
+| GET    | `/api/personnel/:id/merits-violations`                      | Get merits & violations                     |
+| POST   | `/api/personnel/:id/merits-violations`                      | Add merit or violation                      |
+| GET    | `/api/personnel/:id/admin-cases`                            | Get administrative cases                    |
+| POST   | `/api/personnel/:id/admin-cases`                            | Add administrative case                     |
+
+#### Requests Management
+| Method | Endpoint                                                    | Description                                 |
+|--------|-------------------------------------------------------------|---------------------------------------------|
+| GET    | `/api/personnel/requests`                                   | List all requests                           |
+| GET    | `/api/personnel/requests/:id`                               | Get request details                         |
+| POST   | `/api/personnel/requests`                                   | Create a new request                        |
+| PUT    | `/api/personnel/requests/:id`                               | Update a request                            |
+| DELETE | `/api/personnel/requests/:id`                               | Delete/cancel a request                     |
+
+##### Request Types (examples)
+| Method | Endpoint                                                    | Description                                 |
+|--------|-------------------------------------------------------------|---------------------------------------------|
+| GET    | `/api/personnel/requests/:id/leaves`                        | Get leave requests for personnel            |
+| GET    | `/api/personnel/requests/:id/dtr-adjustments`               | Get DTR adjustment requests                 |
+| GET    | `/api/personnel/requests/:id/certifications`                | Get certification requests                  |
+| GET    | `/api/personnel/requests/:id/membership-forms`              | Get membership form requests                |
+| GET    | `/api/personnel/requests/:id/monetizations`                 | Get monetization requests                   |
+| GET    | `/api/personnel/requests/:id/documents`                     | Get document requests                       |
+
+#### Personnel Movement
+| Method | Endpoint                                                    | Description                                 |
+|--------|-------------------------------------------------------------|---------------------------------------------|
+| GET    | `/api/personnel/:id/movements`                              | List all movements for personnel            |
+| POST   | `/api/personnel/:id/movements`                              | Add a new personnel movement                |
+| GET    | `/api/personnel/:id/movements/:movementId`                  | Get details of a specific movement          |
+| PUT    | `/api/personnel/:id/movements/:movementId`                  | Update a personnel movement                 |
+| DELETE | `/api/personnel/:id/movements/:movementId`                  | Delete a personnel movement                 |
+
+*Note: Endpoints and features may be expanded as development progresses.*
 
 ## 🔧 Development
 
 ### Available Scripts
 
-```bash
-# Development
-pnpm dev              # Start development server with hot reload
-pnpm build            # Build for production
-pnpm start            # Start production server
-
-# Database
-pnpm db:generate      # Generate Prisma client
-pnpm db:push          # Push schema to database
-pnpm db:migrate       # Run database migrations
-pnpm db:seed          # Seed database with initial data
-pnpm db:studio        # Open Prisma Studio
-
-# Testing & Linting
-pnpm test             # Run tests
-pnpm lint             # Run ESLint
-pnpm lint:fix         # Fix ESLint errors
 ```
-
-### Adding New Modules
-
-1. **Create module directory** in `src/modules/`
-2. **Create controller** with business logic
-3. **Create routes** with proper permissions
-4. **Import routes** in `src/index.ts`
-5. **Add module configuration** if needed
-
-### Module Structure Example
-
-```
-src/modules/your-module/
-├── your-module.controller.ts    # Business logic
-├── your-module.routes.ts        # Route definitions
-├── your-module.service.ts       # Service layer (optional)
-├── your-module.types.ts         # Module-specific types (optional)
-└── your-module.validation.ts    # Validation schemas (optional)
-```
-
-## 🔒 Security Features
-
-- **JWT Authentication** with refresh tokens
-- **Role-based access control** with granular permissions
-- **Input validation** and sanitization
-- **Rate limiting** to prevent abuse
-- **CORS protection** for cross-origin requests
-- **Helmet.js** for security headers
-- **Password hashing** with bcrypt
-- **SQL injection protection** via Prisma ORM
-
-## 📊 Monitoring & Logging
-
-- **Morgan** for HTTP request logging
-- **Custom error handling** with detailed error messages
-- **Audit logging** for sensitive operations
-- **Health check endpoint** at `/health`
-
-## 🚀 Deployment
-
-### Production Build
-
-```bash
-# Build the application
-pnpm build
-
-# Start production server
-pnpm start
-```
-
-### Environment Variables for Production
-
-```env
-NODE_ENV=production
-DATABASE_URL="your-production-database-url"
-JWT_SECRET="your-production-jwt-secret"
-JWT_REFRESH_SECRET="your-production-refresh-secret"
-PORT=3000
-```
-
-### Docker Deployment (Optional)
-
-Create a `Dockerfile`:
-
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-For support and questions:
-- Create an issue in the repository
-- Check the documentation
-- Review the API endpoints
-
-## 🔄 Module Management
-
-The system is designed to be modular, allowing you to:
-
-- **Enable/disable modules** by commenting out route imports
-- **Add new modules** following the established pattern
-- **Modify existing modules** without affecting others
-- **Customize permissions** per module
-- **Extend functionality** with additional features
-
-Each module is self-contained with its own:
-- Controllers for business logic
-- Routes for API endpoints
-- Permissions for access control
-- Types for TypeScript support
-- Validation for data integrity
-
-This modular approach ensures the system remains maintainable and scalable as your HR needs evolve. 

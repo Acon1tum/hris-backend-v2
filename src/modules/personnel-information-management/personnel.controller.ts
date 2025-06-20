@@ -325,6 +325,9 @@ export class PersonnelController {
         where: { id }
       });
 
+      if (!existingPersonnel.user_id) {
+        throw new CustomError('Personnel has no associated user_id', 400);
+      }
       await tx.user.delete({
         where: { id: existingPersonnel.user_id }
       });
@@ -385,5 +388,146 @@ export class PersonnelController {
         employmentTypeStats
       }
     });
+  }
+
+  // Employment History
+  static async getEmploymentHistory(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const records = await prisma.employmentHistory.findMany({ where: { personnel_id: id } });
+    res.json({ success: true, data: records });
+  }
+
+  static async addEmploymentHistory(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const { organization, position, start_date, end_date, employment_type } = req.body;
+    if (!organization || !position || !start_date || !employment_type) {
+      throw new CustomError('Missing required fields', 400);
+    }
+    const record = await prisma.employmentHistory.create({
+      data: {
+        personnel_id: id,
+        organization,
+        position,
+        start_date: new Date(start_date),
+        end_date: end_date ? new Date(end_date) : null,
+        employment_type
+      }
+    });
+    res.status(201).json({ success: true, data: record });
+  }
+
+  // Membership Data (GSIS, Pag-Ibig, PhilHealth, etc. as part of Personnel)
+  static async getMembershipData(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const personnel = await prisma.personnel.findUnique({
+      where: { id },
+      select: {
+        gsis_number: true,
+        pagibig_number: true,
+        philhealth_number: true,
+        sss_number: true,
+        tin_number: true
+      }
+    });
+    if (!personnel) throw new CustomError('Personnel not found', 404);
+    res.json({ success: true, data: personnel });
+  }
+
+  static async updateMembershipData(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const { gsis_number, pagibig_number, philhealth_number, sss_number, tin_number } = req.body;
+    const personnel = await prisma.personnel.update({
+      where: { id },
+      data: { gsis_number, pagibig_number, philhealth_number, sss_number, tin_number }
+    });
+    res.json({ success: true, data: personnel });
+  }
+
+  // Merits & Violations
+  static async getMeritsViolations(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const records = await prisma.meritViolation.findMany({ where: { personnel_id: id } });
+    res.json({ success: true, data: records });
+  }
+
+  static async addMeritViolation(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const { record_type, description, date_recorded, documented_by, document_path } = req.body;
+    if (!record_type || !description || !date_recorded || !documented_by) {
+      throw new CustomError('Missing required fields', 400);
+    }
+    const record = await prisma.meritViolation.create({
+      data: {
+        personnel_id: id,
+        record_type,
+        description,
+        date_recorded: new Date(date_recorded),
+        documented_by,
+        document_path
+      }
+    });
+    res.status(201).json({ success: true, data: record });
+  }
+
+  // Administrative Cases
+  static async getAdministrativeCases(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const cases = await prisma.administrativeCase.findMany({ where: { personnel_id: id } });
+    res.json({ success: true, data: cases });
+  }
+
+  static async addAdministrativeCase(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const { case_title, case_description, case_status, date_filed, filed_by, document_path } = req.body;
+    if (!case_title || !case_description || !date_filed || !filed_by) {
+      throw new CustomError('Missing required fields', 400);
+    }
+    const adminCase = await prisma.administrativeCase.create({
+      data: {
+        personnel_id: id,
+        case_title,
+        case_description,
+        case_status,
+        date_filed: new Date(date_filed),
+        filed_by,
+        document_path
+      }
+    });
+    res.status(201).json({ success: true, data: adminCase });
+  }
+
+  // Personnel Movement
+  static async getPersonnelMovements(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const movements = await prisma.personnelMovement.findMany({ where: { personnel_id: id } });
+    res.json({ success: true, data: movements });
+  }
+
+  static async addPersonnelMovement(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const { movement_type, previous_department_id, new_department_id, previous_designation, new_designation, previous_salary, new_salary, previous_item_number, new_item_number, effective_date, issued_by, issued_date, remarks, document_path } = req.body;
+    if (!movement_type || !effective_date || !issued_by || !issued_date) {
+      throw new CustomError('Missing required fields', 400);
+    }
+    const movement = await prisma.personnelMovement.create({
+      data: {
+        personnel_id: id,
+        movement_type,
+        previous_department_id,
+        new_department_id,
+        previous_designation,
+        new_designation,
+        previous_salary,
+        new_salary,
+        previous_item_number,
+        new_item_number,
+        effective_date: new Date(effective_date),
+        issued_by,
+        issued_date: new Date(issued_date),
+        remarks,
+        document_path
+      }
+    });
+    res.status(201).json({ success: true, data: movement });
   }
 } 
