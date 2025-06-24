@@ -3,7 +3,10 @@ import { User, Personnel } from '@prisma/client';
 
 // Extended Request interface with user
 export interface AuthenticatedRequest extends Request {
-  user?: User & { personnel?: Personnel };
+  user?: User & { 
+    personnel?: Personnel;
+    permissions?: string[];
+  };
 }
 
 // API Response types
@@ -62,6 +65,8 @@ export interface JWTPayload {
   permissions: string[];
   iat?: number;
   exp?: number;
+  lastActivity?: number;
+  tokenType?: string;
 }
 
 // File upload types

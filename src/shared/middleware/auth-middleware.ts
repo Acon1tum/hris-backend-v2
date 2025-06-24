@@ -27,6 +27,18 @@ export const authMiddleware = async (
 
     const decoded = jwt.verify(token, secret) as JWTPayload;
     
+    // Check token age and activity
+    const now = Math.floor(Date.now() / 1000);
+    const tokenAge = now - (decoded.iat || 0);
+    const lastActivity = decoded.lastActivity || decoded.iat || 0;
+    const inactivityTime = now - lastActivity;
+    
+    // Session timeout check (30 minutes = 1800 seconds)
+    const sessionTimeout = parseInt(process.env.SESSION_TIMEOUT_SECONDS || '1800');
+    if (inactivityTime > sessionTimeout) {
+      throw new CustomError('Session expired due to inactivity', 401);
+    }
+    
     // Get user with roles and permissions
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -54,7 +66,7 @@ export const authMiddleware = async (
       .flatMap(ur => ur.role.role_permissions.map(rp => rp.permission));
 
     // Add user and permissions to request
-    req.user = {
+    (req.user as any) = {
       ...user,
       permissions: [...new Set(permissions)] // Remove duplicates
     };
@@ -77,7 +89,7 @@ export const requirePermission = (permission: string) => {
       return next(new CustomError('Authentication required', 401));
     }
 
-    const userPermissions = req.user.permissions || [];
+    const userPermissions = (req.user as any).permissions || [];
     
     if (!userPermissions.includes(permission)) {
       return next(new CustomError('Insufficient permissions', 403));
@@ -93,7 +105,7 @@ export const requireAnyPermission = (permissions: string[]) => {
       return next(new CustomError('Authentication required', 401));
     }
 
-    const userPermissions = req.user.permissions || [];
+    const userPermissions = (req.user as any).permissions || [];
     const hasPermission = permissions.some(permission => 
       userPermissions.includes(permission)
     );
@@ -112,7 +124,7 @@ export const requireAllPermissions = (permissions: string[]) => {
       return next(new CustomError('Authentication required', 401));
     }
 
-    const userPermissions = req.user.permissions || [];
+    const userPermissions = (req.user as any).permissions || [];
     const hasAllPermissions = permissions.every(permission => 
       userPermissions.includes(permission)
     );

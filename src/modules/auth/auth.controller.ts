@@ -51,7 +51,8 @@ export class AuthController {
             first_name,
             last_name,
             middle_name,
-            employment_type: 'Regular'
+            employment_type: 'Regular',
+            salary: 0.0 // Default salary, can be updated later
           }
         }
       },
@@ -146,7 +147,17 @@ export class AuthController {
         permissions: [...new Set(permissions)]
       } as JWTPayload,
       process.env.JWT_SECRET!,
-      { expiresIn: '24h' }
+      { expiresIn: '2h' }
+    );
+
+    // Generate refresh token
+    const refreshToken = jwt.sign(
+      {
+        userId: user.id,
+        tokenType: 'refresh'
+      },
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!,
+      { expiresIn: '7d' }
     );
 
     // Update last login
@@ -167,7 +178,10 @@ export class AuthController {
           roles,
           permissions: [...new Set(permissions)]
         },
-        token
+        token,
+        refreshToken,
+        expiresIn: process.env.JWT_EXPIRES_IN || '2h',
+        tokenType: 'Bearer'
       }
     });
   }
@@ -218,7 +232,7 @@ export class AuthController {
           permissions: [...new Set(permissions)]
         } as JWTPayload,
         process.env.JWT_SECRET!,
-        { expiresIn: '24h' }
+        { expiresIn: '2h' }
       );
 
       res.json({
