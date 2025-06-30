@@ -262,6 +262,126 @@ Each module has its own set of endpoints following RESTful conventions.
 
 *Note: Endpoints and features may be expanded as development progresses.*
 
+## 🧪 Testing Personnel 201 File Frontend Connection
+
+The Personnel 201 File component in the frontend has been updated to connect to the backend API. Here's how to test the connection:
+
+### Prerequisites
+1. **Backend Setup**: Ensure the backend is running on `http://localhost:3000`
+2. **Database Setup**: Run `pnpm db:seed` to populate test data
+3. **Frontend Setup**: Ensure the frontend is running on `http://localhost:4200`
+
+### Test Data Available
+After seeding, you'll have these test users:
+- **System Administrator**: `admin` / `Admin123!`
+- **HR Manager**: `hr_manager` / `HR123!`  
+- **Employee**: `employee` / `Employee123!`
+
+### Testing Steps
+
+1. **Start the backend:**
+   ```bash
+   cd hris-backend-v2
+   pnpm dev
+   ```
+
+2. **Start the frontend:**
+   ```bash
+   cd hris-frontend
+   ng serve
+   ```
+
+3. **Test the Personnel 201 File page:**
+   - Navigate to: Personnel Information Management → Personnel 201 File
+   - You should see the existing personnel records loaded from the database
+   - Test pagination, search functionality
+   - Test creating new personnel records
+   - Test editing existing records
+   - Test deleting records
+
+### API Endpoints Used by Frontend
+
+The Personnel 201 File component uses these endpoints:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/personnel?page=1&limit=10&search=term` | Get paginated personnel list |
+| GET | `/api/personnel/:id` | Get specific personnel details |
+| POST | `/api/personnel` | Create new personnel record |
+| PUT | `/api/personnel/:id` | Update personnel record |
+| DELETE | `/api/personnel/:id` | Delete personnel record |
+
+### Expected Response Format
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid-string",
+      "first_name": "John",
+      "last_name": "Doe",
+      "middle_name": "Smith",
+      "email": "john.doe@company.com",
+      "contact_number": "+1234567890",
+      "address": "123 Main St",
+      "designation": "Software Engineer",
+      "employment_type": "Regular",
+      "date_hired": "2024-01-15T00:00:00.000Z",
+      "salary": 50000,
+      "gsis_number": "123456789",
+      "pagibig_number": "987654321",
+      "philhealth_number": "1122334455",
+      "sss_number": "5566778899",
+      "tin_number": "9988776655",
+      "user": {
+        "id": "user-uuid",
+        "username": "john.doe",
+        "email": "john.doe@company.com",
+        "status": "Active"
+      },
+      "department": {
+        "id": "dept-uuid",
+        "department_name": "Information Technology"
+      },
+      "created_at": "2024-01-15T08:00:00.000Z",
+      "updated_at": "2024-01-15T08:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 3,
+    "pages": 1
+  }
+}
+```
+
+### Troubleshooting
+
+**Common Issues:**
+
+1. **CORS Error**: Verify `FRONTEND_URL=http://localhost:4200` in backend `.env`
+2. **404 Not Found**: Ensure backend is running on port 3000
+3. **Empty Data**: Run `pnpm db:seed` to populate test data
+4. **Authentication Error**: The Personnel endpoints require authentication - ensure user is logged in
+
+**Debug Steps:**
+1. Check browser console for errors
+2. Check backend console logs
+3. Verify API calls in browser Network tab
+4. Test API endpoints directly with Postman/curl
+
+### Frontend Features Implemented
+
+- ✅ **Data Loading**: Fetches personnel data from backend API
+- ✅ **Pagination**: Server-side pagination with page controls
+- ✅ **Search**: Server-side search by name or department
+- ✅ **CRUD Operations**: Create, Read, Update, Delete personnel records
+- ✅ **Loading States**: Shows loading indicators during API calls
+- ✅ **Error Handling**: Displays error messages for failed requests
+- ✅ **Data Transformation**: Maps backend data to frontend format
+
 ## 🔧 Development
 
 ### Available Scripts

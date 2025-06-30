@@ -1,5 +1,6 @@
-import { PrismaClient, Permission, Status } from '@prisma/client';
+import { PrismaClient, Permission, Status, Gender, CivilStatus, EmploymentType } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import process from 'process';
 
 const prisma = new PrismaClient();
 
@@ -125,8 +126,9 @@ async function main() {
     { name: 'Operations', description: 'Operations Department' }
   ];
 
+  const createdDepartments: { [key: string]: string } = {};
   for (const dept of departments) {
-    await prisma.department.upsert({
+    const department = await prisma.department.upsert({
       where: { department_name: dept.name },
       update: {},
       create: {
@@ -134,11 +136,12 @@ async function main() {
         description: dept.description
       }
     });
+    createdDepartments[dept.name] = department.id;
   }
 
   console.log('✅ Departments created');
 
-  // Create default admin user
+  // Create default admin user with detailed personnel information
   const hashedPassword = await bcrypt.hash('Admin123!', 12);
   
   const adminUser = await prisma.user.upsert({
@@ -153,9 +156,22 @@ async function main() {
         create: {
           first_name: 'System',
           last_name: 'Administrator',
-          employment_type: 'Regular',
-          date_hired: new Date(),
-          salary: 0
+          middle_name: 'Admin',
+          date_of_birth: new Date('1985-01-15'),
+          gender: Gender.Male,
+          civil_status: CivilStatus.Single,
+          contact_number: '+63-917-123-4567',
+          address: '123 Admin Street, Business District, Metro Manila, Philippines',
+          department_id: createdDepartments['Information Technology'],
+          designation: 'System Administrator',
+          employment_type: EmploymentType.Regular,
+          date_hired: new Date('2020-01-01'),
+          salary: 80000,
+          gsis_number: 'GSIS-001122334455',
+          pagibig_number: 'HDMF-112233445566',
+          philhealth_number: 'PH-123456789012',
+          sss_number: 'SSS-001122334455',
+          tin_number: 'TIN-123456789'
         }
       }
     }
@@ -179,7 +195,7 @@ async function main() {
 
   console.log('✅ Admin user created');
 
-  // Create sample HR user
+  // Create sample HR user with detailed personnel information
   const hrPassword = await bcrypt.hash('HR123!', 12);
   
   const hrUser = await prisma.user.upsert({
@@ -192,12 +208,24 @@ async function main() {
       status: Status.Active,
       personnel: {
         create: {
-          first_name: 'HR',
-          last_name: 'Manager',
-          employment_type: 'Regular',
-          date_hired: new Date(),
-          salary: 50000,
-          department_id: (await prisma.department.findFirst({ where: { department_name: 'Human Resources' } }))?.id
+          first_name: 'Maria',
+          last_name: 'Santos',
+          middle_name: 'Reyes',
+          date_of_birth: new Date('1988-03-22'),
+          gender: Gender.Female,
+          civil_status: CivilStatus.Married,
+          contact_number: '+63-928-234-5678',
+          address: '456 HR Avenue, Makati City, Metro Manila, Philippines',
+          department_id: createdDepartments['Human Resources'],
+          designation: 'HR Manager',
+          employment_type: EmploymentType.Regular,
+          date_hired: new Date('2019-06-15'),
+          salary: 65000,
+          gsis_number: 'GSIS-223344556677',
+          pagibig_number: 'HDMF-223344556677',
+          philhealth_number: 'PH-234567890123',
+          sss_number: 'SSS-223344556677',
+          tin_number: 'TIN-234567890'
         }
       }
     }
@@ -221,7 +249,7 @@ async function main() {
 
   console.log('✅ HR user created');
 
-  // Create sample employee user
+  // Create sample employee user with detailed personnel information
   const employeePassword = await bcrypt.hash('Employee123!', 12);
   
   const employeeUser = await prisma.user.upsert({
@@ -234,12 +262,24 @@ async function main() {
       status: Status.Active,
       personnel: {
         create: {
-          first_name: 'John',
-          last_name: 'Doe',
-          employment_type: 'Regular',
-          date_hired: new Date(),
-          salary: 30000,
-          department_id: (await prisma.department.findFirst({ where: { department_name: 'Information Technology' } }))?.id
+          first_name: 'Juan',
+          last_name: 'Cruz',
+          middle_name: 'dela',
+          date_of_birth: new Date('1992-07-08'),
+          gender: Gender.Male,
+          civil_status: CivilStatus.Single,
+          contact_number: '+63-939-345-6789',
+          address: '789 Employee Road, Quezon City, Metro Manila, Philippines',
+          department_id: createdDepartments['Information Technology'],
+          designation: 'Software Developer',
+          employment_type: EmploymentType.Regular,
+          date_hired: new Date('2021-03-01'),
+          salary: 45000,
+          gsis_number: 'GSIS-334455667788',
+          pagibig_number: 'HDMF-334455667788',
+          philhealth_number: 'PH-345678901234',
+          sss_number: 'SSS-334455667788',
+          tin_number: 'TIN-345678901'
         }
       }
     }
@@ -262,6 +302,121 @@ async function main() {
   });
 
   console.log('✅ Employee user created');
+
+  // Create additional sample employees with varied profiles
+  const additionalEmployees = [
+    {
+      username: 'finance_head',
+      email: 'finance@company.com',
+      password: 'Finance123!',
+      personnel: {
+        first_name: 'Ana',
+        last_name: 'Garcia',
+        middle_name: 'Lopez',
+        date_of_birth: new Date('1986-11-12'),
+        gender: Gender.Female,
+        civil_status: CivilStatus.Married,
+        contact_number: '+63-917-456-7890',
+        address: '321 Finance Street, BGC, Taguig City, Metro Manila, Philippines',
+        department_id: createdDepartments['Finance'],
+        designation: 'Finance Manager',
+        employment_type: EmploymentType.Regular,
+        date_hired: new Date('2018-09-01'),
+        salary: 70000,
+        gsis_number: 'GSIS-445566778899',
+        pagibig_number: 'HDMF-445566778899',
+        philhealth_number: 'PH-456789012345',
+        sss_number: 'SSS-445566778899',
+        tin_number: 'TIN-456789012'
+      }
+    },
+    {
+      username: 'marketing_lead',
+      email: 'marketing@company.com',
+      password: 'Marketing123!',
+      personnel: {
+        first_name: 'Carlos',
+        last_name: 'Rodriguez',
+        middle_name: 'Miguel',
+        date_of_birth: new Date('1990-04-25'),
+        gender: Gender.Male,
+        civil_status: CivilStatus.Single,
+        contact_number: '+63-928-567-8901',
+        address: '654 Marketing Plaza, Ortigas Center, Pasig City, Metro Manila, Philippines',
+        department_id: createdDepartments['Marketing'],
+        designation: 'Marketing Specialist',
+        employment_type: EmploymentType.Regular,
+        date_hired: new Date('2020-11-15'),
+        salary: 50000,
+        gsis_number: 'GSIS-556677889900',
+        pagibig_number: 'HDMF-556677889900',
+        philhealth_number: 'PH-567890123456',
+        sss_number: 'SSS-556677889900',
+        tin_number: 'TIN-567890123'
+      }
+    },
+    {
+      username: 'operations_mgr',
+      email: 'operations@company.com',
+      password: 'Operations123!',
+      personnel: {
+        first_name: 'Elena',
+        last_name: 'Fernandez',
+        middle_name: 'Santos',
+        date_of_birth: new Date('1987-09-30'),
+        gender: Gender.Female,
+        civil_status: CivilStatus.Divorced,
+        contact_number: '+63-939-678-9012',
+        address: '987 Operations Center, Alabang, Muntinlupa City, Metro Manila, Philippines',
+        department_id: createdDepartments['Operations'],
+        designation: 'Operations Manager',
+        employment_type: EmploymentType.Regular,
+        date_hired: new Date('2019-02-01'),
+        salary: 60000,
+        gsis_number: 'GSIS-667788990011',
+        pagibig_number: 'HDMF-667788990011',
+        philhealth_number: 'PH-678901234567',
+        sss_number: 'SSS-667788990011',
+        tin_number: 'TIN-678901234'
+      }
+    }
+  ];
+
+  for (const emp of additionalEmployees) {
+    const hashedEmpPassword = await bcrypt.hash(emp.password, 12);
+    
+    const newUser = await prisma.user.upsert({
+      where: { username: emp.username },
+      update: {},
+      create: {
+        username: emp.username,
+        email: emp.email,
+        password_hash: hashedEmpPassword,
+        status: Status.Active,
+        personnel: {
+          create: emp.personnel
+        }
+      }
+    });
+
+    // Assign employee role to additional employees
+    await prisma.userRole.upsert({
+      where: {
+        user_id_role_id: {
+          user_id: newUser.id,
+          role_id: employeeRole.id
+        }
+      },
+      update: {},
+      create: {
+        user_id: newUser.id,
+        role_id: employeeRole.id,
+        assigned_by: null
+      }
+    });
+  }
+
+  console.log('✅ Additional employees created');
 
   // Create default leave types
   const leaveTypes = [
@@ -303,6 +458,9 @@ async function main() {
   console.log('👤 Admin: admin / Admin123!');
   console.log('👤 HR Manager: hr_manager / HR123!');
   console.log('👤 Employee: employee / Employee123!');
+  console.log('👤 Finance Manager: finance_head / Finance123!');
+  console.log('👤 Marketing Specialist: marketing_lead / Marketing123!');
+  console.log('👤 Operations Manager: operations_mgr / Operations123!');
 }
 
 main()

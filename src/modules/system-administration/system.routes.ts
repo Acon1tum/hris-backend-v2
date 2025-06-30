@@ -3,6 +3,7 @@ import { permissionsRoutes } from './permissions/permissions.routes';
 import { usersRoutes } from './users/users.routes';
 import { rolesRoutes } from './roles/roles.routes';
 import { auditLogsRoutes } from './audit-logs/audit-logs.routes';
+import { departmentsRoutes } from './departments/departments.routes';
 
 const router = Router();
 
@@ -11,6 +12,7 @@ router.use('/permissions', permissionsRoutes);
 router.use('/users', usersRoutes);
 router.use('/roles', rolesRoutes);
 router.use('/audit-logs', auditLogsRoutes);
+router.use('/departments', departmentsRoutes);
 
 // Placeholder routes for system administration module
 router.get('/', (req, res) => {
