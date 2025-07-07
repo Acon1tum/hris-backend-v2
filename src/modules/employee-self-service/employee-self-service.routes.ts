@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { employeeSelfServiceController } from './employee-self-service.controller';
+import { authMiddleware } from '../../shared/middleware/auth-middleware';
 
 const router = Router();
 
@@ -9,5 +11,8 @@ router.get('/', (req, res) => {
     message: 'Employee Self Service module - Coming soon'
   });
 });
+
+// GET /api/employee-self-service/my-profile - Get logged-in user's profile
+router.get('/my-profile', authMiddleware, employeeSelfServiceController.getMyProfile);
 
 export { router as employeeSelfServiceRoutes }; 
