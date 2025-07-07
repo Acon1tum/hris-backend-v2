@@ -513,6 +513,7 @@ model User {
   username        String   @unique
   password_hash   String
   email           String   @unique
+  profile_picture String?
   status          Status   @default(Active)
   created_at      DateTime @default(now())
   updated_at      DateTime @default(now())
@@ -524,6 +525,7 @@ model User {
   audit_logs      AuditLog[]
   certificates    CertificateRequest[]
   documents       Document[]
+  user_documents  UserDocument[]
   feedback        EmployeeFeedback[]
   interviews      InterviewSchedule[]
   examinations    ExaminationSchedule[]
@@ -1274,4 +1276,19 @@ model CourseEnrollment {
   lastAccessedAt  DateTime @default(now())
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model UserDocument {
+  id              String   @id @default(uuid())
+  user_id         String
+  title           String
+  description     String?
+  file_url        String
+  file_type       String
+  file_size       Int
+  category        String
+  is_private      Boolean  @default(false)
+  uploaded_at     DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 } 
