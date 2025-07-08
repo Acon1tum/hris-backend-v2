@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '@/types';
 import { CustomError } from '@/shared/middleware/error-handler';
 import { parsePaginationQuery, createPaginationResponse } from '@/utils/pagination';
 import { validateRequiredFields } from '@/utils/validation';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -40,7 +41,8 @@ export class PersonnelController {
               id: true,
               username: true,
               email: true,
-              status: true
+              status: true,
+              profile_picture: true
             }
           },
           department: {
@@ -159,7 +161,8 @@ export class PersonnelController {
       pagibig_number,
       philhealth_number,
       sss_number,
-      tin_number
+      tin_number,
+      profile_picture
     } = req.body;
 
     // Validate required fields
@@ -183,6 +186,10 @@ export class PersonnelController {
       throw new CustomError('Username or email already exists', 409);
     }
 
+    // Hash password
+    const saltRounds = 12;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
     // Create user and personnel in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create user
@@ -190,8 +197,9 @@ export class PersonnelController {
         data: {
           username,
           email,
-          password_hash: password, // Note: Should hash password in production
-          status: 'Active'
+          password_hash: passwordHash,
+          status: 'Active',
+          ...(profile_picture ? { profile_picture } : {})
         }
       });
 
@@ -529,5 +537,81 @@ export class PersonnelController {
       }
     });
     res.status(201).json({ success: true, data: movement });
+  }
+
+  // Get simplified employee list for admin dashboard
+  static async getDashboardEmployees(req: AuthenticatedRequest, res: Response) {
+    const pagination = parsePaginationQuery(req.query);
+    const { search, department, status } = req.query;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { first_name: { contains: search as string, mode: 'insensitive' } },
+        { last_name: { contains: search as string, mode: 'insensitive' } },
+        { middle_name: { contains: search as string, mode: 'insensitive' } },
+        { designation: { contains: search as string, mode: 'insensitive' } }
+      ];
+    }
+    if (department) {
+      where.department_id = department;
+    }
+    if (status) {
+      where.user = { status: status as string };
+    }
+
+    const [personnel, total] = await Promise.all([
+      prisma.personnel.findMany({
+        where,
+        include: {
+          user: { select: { email: true, status: true } },
+          department: { select: { department_name: true } },
+          employeeSelfServiceProfile: { select: { profilePicture: true } },
+          employeeDocuments: {
+            where: {
+              OR: [
+                { category: 'profile' },
+                { fileType: { contains: 'image', mode: 'insensitive' } }
+              ]
+            },
+            select: { fileUrl: true },
+            take: 1
+          }
+        },
+        skip: pagination.skip,
+        take: pagination.limit,
+        orderBy: { [pagination.sortBy]: pagination.sortOrder }
+      }),
+      prisma.personnel.count({ where })
+    ]);
+
+    // Map to frontend Employee interface
+    const employees = personnel.map((p) => {
+      let profileImage =
+        p.employeeSelfServiceProfile?.profilePicture ||
+        (p.employeeDocuments && p.employeeDocuments.length > 0 ? p.employeeDocuments[0].fileUrl : null) ||
+        'https://randomuser.me/api/portraits/lego/1.jpg';
+      return {
+        id: p.id,
+        firstName: p.first_name,
+        lastName: p.last_name,
+        email: p.user?.email || '',
+        department: p.department?.department_name || '',
+        position: p.designation || '',
+        hireDate: p.date_hired ? p.date_hired.toISOString().split('T')[0] : '',
+        status: p.user?.status || '',
+        profileImage
+      };
+    });
+
+    res.json({
+      success: true,
+      data: employees,
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total
+      }
+    });
   }
 } 

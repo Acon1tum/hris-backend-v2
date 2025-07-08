@@ -60,4 +60,7 @@ router.post('/:id/admin-cases', requirePermission('admin_case_create'), Personne
 router.get('/:id/movements', requirePermission('employee_read'), PersonnelController.getPersonnelMovements);
 router.post('/:id/movements', requirePermission('employee_update'), PersonnelController.addPersonnelMovement);
 
+// Get simplified employee list for admin dashboard
+router.get('/dashboard-employees', requirePermission('employee_read'), PersonnelController.getDashboardEmployees);
+
 export { router as personnelRoutes }; 
