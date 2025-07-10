@@ -85,4 +85,77 @@ export const employeeSelfServiceController = {
       });
     }
   },
+
+  async updateMyProfile(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+      const {
+        firstName,
+        middleName,
+        lastName,
+        birthdate,
+        contactNumber,
+        address,
+        email,
+        gender,
+        civilStatus,
+        // citizenship,
+        employmentType,
+        designation,
+        department,
+        appointmentDate,
+        startDate,
+        employmentStatus,
+        jobLevel,
+        jobGrade,
+        gsis,
+        pagibig,
+        philhealth,
+        sss
+      } = req.body;
+      // Update personnel and user
+      const personnel = await prisma.personnel.findFirst({ where: { user_id: userId } });
+      if (!personnel) {
+        return res.status(404).json({ success: false, message: 'Profile not found' });
+      }
+      // Find department_id if department name is provided
+      let departmentId = undefined;
+      if (department) {
+        const dept = await prisma.department.findFirst({ where: { department_name: department } });
+        if (dept) departmentId = dept.id;
+      }
+      // Update personnel fields
+      const updatedPersonnel = await prisma.personnel.update({
+        where: { id: personnel.id },
+        data: {
+          first_name: firstName,
+          middle_name: middleName,
+          last_name: lastName,
+          date_of_birth: birthdate ? new Date(birthdate) : null,
+          contact_number: contactNumber,
+          address: address,
+          gender: gender,
+          civil_status: civilStatus,
+          employment_type: employmentType,
+          designation: designation,
+          department_id: departmentId,
+          date_hired: appointmentDate ? new Date(appointmentDate) : null,
+          gsis_number: gsis,
+          pagibig_number: pagibig,
+          philhealth_number: philhealth,
+          sss_number: sss
+        }
+      });
+      // Update user email if changed
+      if (email) {
+        await prisma.user.update({ where: { id: userId }, data: { email } });
+      }
+      res.json({ success: true, message: 'Profile updated successfully' });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: 'Failed to update profile', error: error.message });
+    }
+  },
 }; 
