@@ -5,6 +5,8 @@ import { CustomError } from '@/shared/middleware/error-handler';
 import { parsePaginationQuery, createPaginationResponse } from '@/utils/pagination';
 import { validateRequiredFields } from '@/utils/validation';
 import bcrypt from 'bcryptjs';
+import path from 'path';
+import fs from 'fs/promises';
 
 const prisma = new PrismaClient();
 
@@ -613,5 +615,66 @@ export class PersonnelController {
         total
       }
     });
+  }
+
+  /**
+   * Upload multiple documents for a personnel (base64, no Multer)
+   * POST /api/personnel/:id/documents
+   * Body: { documents: [{ base64, title, description, fileType, category, isPrivate }] }
+   */
+  static async uploadDocuments(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const { documents } = req.body;
+    if (!Array.isArray(documents) || documents.length === 0) {
+      throw new CustomError('No documents provided', 400);
+    }
+    // Ensure uploads/documents exists
+    const uploadDir = path.join(process.cwd(), 'uploads', 'documents');
+    await fs.mkdir(uploadDir, { recursive: true });
+    const createdDocs = [];
+    for (const doc of documents) {
+      const { base64, title, description, fileType, category, isPrivate } = doc;
+      if (!base64 || !title || !fileType) {
+        throw new CustomError('Missing required document fields', 400);
+      }
+      // Decode base64
+      const matches = base64.match(/^data:(.+);base64,(.+)$/);
+      const buffer = Buffer.from(matches ? matches[2] : base64, 'base64');
+      // Generate unique filename
+      const ext = fileType.split('/')[1] || 'bin';
+      const fileName = `${id}_${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+      const filePath = path.join(uploadDir, fileName);
+      await fs.writeFile(filePath, buffer);
+      // Save to DB
+      const fileUrl = `/uploads/documents/${fileName}`;
+      const fileSize = buffer.length;
+      const docRecord = await prisma.employeeDocument.create({
+        data: {
+          personnelId: id,
+          title,
+          description,
+          fileUrl,
+          fileType,
+          fileSize,
+          category: category || 'general',
+          isPrivate: isPrivate ?? false
+        }
+      });
+      createdDocs.push(docRecord);
+    }
+    res.status(201).json({ success: true, data: createdDocs });
+  }
+
+  /**
+   * Get all documents for a personnel
+   * GET /api/personnel/:id/documents
+   */
+  static async getDocuments(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const docs = await prisma.employeeDocument.findMany({
+      where: { personnelId: id },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ success: true, data: docs });
   }
 } 

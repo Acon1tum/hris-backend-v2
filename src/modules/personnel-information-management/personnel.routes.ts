@@ -63,4 +63,10 @@ router.post('/:id/movements', requirePermission('employee_update'), PersonnelCon
 // Get simplified employee list for admin dashboard
 router.get('/dashboard-employees', requirePermission('employee_read'), PersonnelController.getDashboardEmployees);
 
+// Upload multiple documents for a personnel (base64, no Multer)
+router.post('/:id/documents', requirePermission('employee_update'), PersonnelController.uploadDocuments);
+
+// Get all documents for a personnel
+router.get('/:id/documents', requirePermission('employee_read'), PersonnelController.getDocuments);
+
 export { router as personnelRoutes }; 
