@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthenticatedRequest } from '../../types';
+import * as fs from 'fs';
+import * as path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
 const prisma = new PrismaClient();
 
@@ -156,6 +159,183 @@ export const employeeSelfServiceController = {
       res.json({ success: true, message: 'Profile updated successfully' });
     } catch (error: any) {
       res.status(500).json({ success: false, message: 'Failed to update profile', error: error.message });
+    }
+  },
+
+  // GET /api/employee-self-service/my-documents - Get user's documents
+  async getMyDocuments(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Unauthorized',
+        });
+      }
+
+      const personnel = await prisma.personnel.findFirst({
+        where: { user_id: userId },
+      });
+
+      if (!personnel) {
+        return res.status(404).json({
+          success: false,
+          message: 'Personnel not found',
+        });
+      }
+
+      const documents = await prisma.employeeDocument.findMany({
+        where: { personnelId: personnel.id },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      res.json({
+        success: true,
+        data: documents,
+        message: 'Documents fetched successfully',
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch documents',
+        error: error.message,
+      });
+    }
+  },
+
+  // POST /api/employee-self-service/upload-document - Upload document
+  async uploadDocument(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Unauthorized',
+        });
+      }
+
+      const personnel = await prisma.personnel.findFirst({
+        where: { user_id: userId },
+      });
+
+      if (!personnel) {
+        return res.status(404).json({
+          success: false,
+          message: 'Personnel not found',
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'No file uploaded',
+        });
+      }
+
+      const { title, description, category } = req.body;
+      const file = req.file;
+
+      // Create uploads directory if it doesn't exist
+      const uploadsDir = path.join(__dirname, '../../../uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      // Generate unique filename
+      const fileExtension = path.extname(file.originalname);
+      const fileName = `${uuidv4()}${fileExtension}`;
+      const filePath = path.join(uploadsDir, fileName);
+
+      // Move file to uploads directory
+      fs.renameSync(file.path, filePath);
+
+      // Save document record to database
+      const document = await prisma.employeeDocument.create({
+        data: {
+          personnelId: personnel.id,
+          title,
+          description: description || null,
+          fileUrl: `/uploads/${fileName}`,
+          fileType: file.mimetype,
+          fileSize: file.size,
+          category: category || 'Personal',
+          isPrivate: false,
+        },
+      });
+
+      res.status(201).json({
+        success: true,
+        data: document,
+        message: 'Document uploaded successfully',
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to upload document',
+        error: error.message,
+      });
+    }
+  },
+
+  // DELETE /api/employee-self-service/documents/:id - Delete document
+  async deleteDocument(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.user?.id;
+      const { id } = req.params;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Unauthorized',
+        });
+      }
+
+      const personnel = await prisma.personnel.findFirst({
+        where: { user_id: userId },
+      });
+
+      if (!personnel) {
+        return res.status(404).json({
+          success: false,
+          message: 'Personnel not found',
+        });
+      }
+
+      const document = await prisma.employeeDocument.findFirst({
+        where: {
+          id,
+          personnelId: personnel.id,
+        },
+      });
+
+      if (!document) {
+        return res.status(404).json({
+          success: false,
+          message: 'Document not found',
+        });
+      }
+
+      // Delete file from filesystem
+      const filePath = path.join(__dirname, '../../../', document.fileUrl);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      // Delete from database
+      await prisma.employeeDocument.delete({
+        where: { id },
+      });
+
+      res.json({
+        success: true,
+        message: 'Document deleted successfully',
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete document',
+        error: error.message,
+      });
     }
   },
 }; 

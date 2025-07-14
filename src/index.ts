@@ -30,6 +30,7 @@ import { authMiddleware } from './shared/middleware/auth-middleware';
 
 // Import types
 import { Request, Response, NextFunction } from 'express';
+import path from 'path';
 
 dotenv.config();
 
@@ -76,6 +77,14 @@ app.use('/api/learning', authMiddleware, learningRoutes);
 app.use('/api/system', authMiddleware, systemRoutes);
 app.use('/api/employee-self-service', authMiddleware, employeeSelfServiceRoutes);
 app.use('/api/health-wellness', authMiddleware, healthWellnessRoutes);
+
+// Serve static files from /uploads with CORS and cross-origin headers
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+  setHeaders: (res, filePath) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 
 // Error handling middleware
 app.use(notFoundHandler);
