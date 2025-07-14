@@ -1216,8 +1216,8 @@ model WorkExperience {
 
 model EmployeeDocument {
   id              String   @id @default(uuid())
-  personnelId     String
-  personnel       Personnel @relation(fields: [personnelId], references: [id])
+  personnelId     String?
+  personnel       Personnel? @relation(fields: [personnelId], references: [id], onDelete: Cascade)
   title           String
   description     String?
   fileUrl         String
