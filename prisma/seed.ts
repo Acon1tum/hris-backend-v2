@@ -453,6 +453,214 @@ async function main() {
 
   console.log('✅ Leave types created');
 
+  // Get all personnel and leave types for creating balances and applications
+  const allPersonnel = await prisma.personnel.findMany();
+  const allLeaveTypes = await prisma.leaveType.findMany();
+  const currentYear = new Date().getFullYear().toString();
+
+  // Create leave balances for all personnel
+  console.log('🌱 Creating leave balances...');
+  for (const personnel of allPersonnel) {
+    for (const leaveType of allLeaveTypes) {
+      let totalCredits = 15; // Default credits
+      
+      // Assign different credits based on leave type
+      if (leaveType.leave_type_name === 'Vacation Leave') totalCredits = 15;
+      else if (leaveType.leave_type_name === 'Sick Leave') totalCredits = 15;
+      else if (leaveType.leave_type_name === 'Maternity Leave') totalCredits = 105;
+      else if (leaveType.leave_type_name === 'Paternity Leave') totalCredits = 7;
+      else if (leaveType.leave_type_name === 'Personal Leave') totalCredits = 3;
+
+      await prisma.leaveBalance.upsert({
+        where: {
+          personnel_id_leave_type_id_year: {
+            personnel_id: personnel.id,
+            leave_type_id: leaveType.id,
+            year: currentYear
+          }
+        },
+        update: {},
+        create: {
+          personnel_id: personnel.id,
+          leave_type_id: leaveType.id,
+          year: currentYear,
+          total_credits: totalCredits,
+          used_credits: 0,
+          earned_credits: totalCredits
+        }
+      });
+    }
+  }
+
+  console.log('✅ Leave balances created');
+
+  // Create sample leave applications
+  console.log('🌱 Creating sample leave applications...');
+  
+  if (allPersonnel.length > 0 && allLeaveTypes.length > 0) {
+    const vacationLeave = allLeaveTypes.find(lt => lt.leave_type_name === 'Vacation Leave');
+    const sickLeave = allLeaveTypes.find(lt => lt.leave_type_name === 'Sick Leave');
+    const personalLeave = allLeaveTypes.find(lt => lt.leave_type_name === 'Personal Leave');
+
+    const sampleApplications = [
+      {
+        personnel_id: allPersonnel[0].id, // Admin
+        leave_type_id: vacationLeave?.id || allLeaveTypes[0].id,
+        start_date: new Date('2024-12-15'),
+        end_date: new Date('2024-12-20'),
+        total_days: 6,
+        status: 'Approved',
+        reason: 'Year-end vacation with family'
+      },
+      {
+        personnel_id: allPersonnel[1].id, // HR Manager
+        leave_type_id: sickLeave?.id || allLeaveTypes[1].id,
+        start_date: new Date('2024-11-25'),
+        end_date: new Date('2024-11-26'),
+        total_days: 2,
+        status: 'Approved',
+        reason: 'Medical checkup and recovery',
+        supporting_document: 'medical_certificate_nov2024.pdf'
+      },
+      {
+        personnel_id: allPersonnel[2].id, // Employee
+        leave_type_id: personalLeave?.id || allLeaveTypes[4].id,
+        start_date: new Date('2024-12-02'),
+        end_date: new Date('2024-12-02'),
+        total_days: 1,
+        status: 'Pending',
+        reason: 'Personal appointment'
+      },
+      {
+        personnel_id: allPersonnel.length > 3 ? allPersonnel[3].id : allPersonnel[0].id, // Finance Head or fallback
+        leave_type_id: vacationLeave?.id || allLeaveTypes[0].id,
+        start_date: new Date('2024-12-23'),
+        end_date: new Date('2024-12-30'),
+        total_days: 8,
+        status: 'Pending',
+        reason: 'Christmas and New Year holiday'
+      },
+      {
+        personnel_id: allPersonnel.length > 4 ? allPersonnel[4].id : allPersonnel[1].id, // Marketing Lead or fallback
+        leave_type_id: sickLeave?.id || allLeaveTypes[1].id,
+        start_date: new Date('2024-10-15'),
+        end_date: new Date('2024-10-16'),
+        total_days: 2,
+        status: 'Rejected',
+        reason: 'Flu symptoms'
+      },
+      {
+        personnel_id: allPersonnel.length > 5 ? allPersonnel[5].id : allPersonnel[2].id, // Operations Manager or fallback
+        leave_type_id: vacationLeave?.id || allLeaveTypes[0].id,
+        start_date: new Date('2024-11-18'),
+        end_date: new Date('2024-11-22'),
+        total_days: 5,
+        status: 'Approved',
+        reason: 'Wedding anniversary celebration'
+      }
+    ];
+
+    for (const app of sampleApplications) {
+      const existingApp = await prisma.leaveApplication.findFirst({
+        where: {
+          personnel_id: app.personnel_id,
+          leave_type_id: app.leave_type_id,
+          start_date: app.start_date
+        }
+      });
+
+      if (!existingApp) {
+        const leaveApp = await prisma.leaveApplication.create({
+          data: {
+            personnel_id: app.personnel_id,
+            leave_type_id: app.leave_type_id,
+            start_date: app.start_date,
+            end_date: app.end_date,
+            total_days: app.total_days,
+            status: app.status as any,
+            reason: app.reason,
+            supporting_document: app.supporting_document
+          }
+        });
+
+        // Update leave balance if approved
+        if (app.status === 'Approved') {
+          await prisma.leaveBalance.updateMany({
+            where: {
+              personnel_id: app.personnel_id,
+              leave_type_id: app.leave_type_id,
+              year: currentYear
+            },
+            data: {
+              used_credits: {
+                increment: app.total_days
+              }
+            }
+          });
+        }
+      }
+    }
+  }
+
+  console.log('✅ Sample leave applications created');
+
+  // Create sample leave monetization requests
+  console.log('🌱 Creating sample leave monetization requests...');
+  
+  if (allPersonnel.length > 0 && allLeaveTypes.length > 0) {
+    const vacationLeave = allLeaveTypes.find(lt => lt.leave_type_name === 'Vacation Leave');
+    
+    const sampleMonetization = [
+      {
+        personnel_id: allPersonnel[0].id, // Admin
+        leave_type_id: vacationLeave?.id || allLeaveTypes[0].id,
+        days_to_monetize: 5,
+        status: 'Approved',
+        amount: 15000 // Assuming daily rate calculation
+      },
+      {
+        personnel_id: allPersonnel[1].id, // HR Manager
+        leave_type_id: vacationLeave?.id || allLeaveTypes[0].id,
+        days_to_monetize: 3,
+        status: 'Pending',
+        amount: null
+      },
+      {
+        personnel_id: allPersonnel.length > 3 ? allPersonnel[3].id : allPersonnel[2].id, // Finance Head or fallback
+        leave_type_id: vacationLeave?.id || allLeaveTypes[0].id,
+        days_to_monetize: 7,
+        status: 'Rejected',
+        amount: null
+      }
+    ];
+
+    for (const monetization of sampleMonetization) {
+      const existing = await prisma.leaveMonetization.findFirst({
+        where: {
+          personnel_id: monetization.personnel_id,
+          leave_type_id: monetization.leave_type_id,
+          days_to_monetize: monetization.days_to_monetize
+        }
+      });
+
+      if (!existing) {
+        await prisma.leaveMonetization.create({
+          data: {
+            personnel_id: monetization.personnel_id,
+            leave_type_id: monetization.leave_type_id,
+            days_to_monetize: monetization.days_to_monetize,
+            status: monetization.status as any,
+            amount: monetization.amount,
+            approved_by: monetization.status === 'Approved' ? allPersonnel[0].user_id : null,
+            approval_date: monetization.status === 'Approved' ? new Date() : null
+          }
+        });
+      }
+    }
+  }
+
+  console.log('✅ Sample leave monetization requests created');
+
   console.log('🎉 Database seeding completed successfully!');
   console.log('\n📋 Default users created:');
   console.log('👤 Admin: admin / Admin123!');
@@ -461,6 +669,18 @@ async function main() {
   console.log('👤 Finance Manager: finance_head / Finance123!');
   console.log('👤 Marketing Specialist: marketing_lead / Marketing123!');
   console.log('👤 Operations Manager: operations_mgr / Operations123!');
+  console.log('\n📊 Leave data created:');
+  console.log(`✅ ${allLeaveTypes.length} leave types`);
+  console.log(`✅ ${allPersonnel.length * allLeaveTypes.length} leave balances for ${currentYear}`);
+  console.log('✅ 6 sample leave applications (Approved, Pending, Rejected)');
+  console.log('✅ 3 sample leave monetization requests');
+  console.log('\n🔍 Sample leave data includes:');
+  console.log('• Admin: Approved vacation (Dec 15-20), Approved monetization (5 days)');
+  console.log('• HR Manager: Approved sick leave (Nov 25-26), Pending monetization (3 days)');
+  console.log('• Employee: Pending personal leave (Dec 2)');
+  console.log('• Finance Head: Pending vacation (Dec 23-30), Rejected monetization (7 days)');
+  console.log('• Marketing Lead: Rejected sick leave (Oct 15-16)');
+  console.log('• Operations Manager: Approved vacation (Nov 18-22)');
 }
 
 main()
