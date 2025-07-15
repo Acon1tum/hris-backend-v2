@@ -21,6 +21,8 @@ export class LeaveController {
         limit = 10 
       } = req.query;
 
+      console.log('getLeaveApplications called with filters:', { status, leave_type_id, personnel_id, start_date, end_date, page, limit });
+
       const where: any = {};
       
       // Filter by status
@@ -71,16 +73,16 @@ export class LeaveController {
         prisma.leaveApplication.count({ where })
       ]);
 
+      console.log(`Found ${applications.length} leave applications, total count: ${total}`);
+
       res.json({
         success: true,
-        data: {
-          applications,
-          pagination: {
-            page: Number(page),
-            limit: Number(limit),
-            total,
-            totalPages: Math.ceil(total / Number(limit))
-          }
+        data: applications,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          totalPages: Math.ceil(total / Number(limit))
         },
         message: 'Leave applications fetched successfully'
       });
@@ -353,6 +355,7 @@ export class LeaveController {
   static async approveLeaveApplication(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
+      const { comments } = req.body;
 
       const application = await prisma.leaveApplication.findUnique({
         where: { id },
@@ -373,7 +376,12 @@ export class LeaveController {
       // Update application status
       const updatedApplication = await prisma.leaveApplication.update({
         where: { id },
-        data: { status: 'Approved' }
+        data: { 
+          status: 'Approved',
+          approved_by: req.user?.id,
+          approval_date: new Date(),
+          approval_comments: comments
+        }
       });
 
       // Deduct from leave balance
@@ -407,6 +415,7 @@ export class LeaveController {
   static async rejectLeaveApplication(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
+      const { comments } = req.body;
 
       const application = await prisma.leaveApplication.findUnique({
         where: { id }
@@ -422,7 +431,12 @@ export class LeaveController {
 
       const updatedApplication = await prisma.leaveApplication.update({
         where: { id },
-        data: { status: 'Rejected' }
+        data: { 
+          status: 'Rejected',
+          approved_by: req.user?.id,
+          approval_date: new Date(),
+          approval_comments: comments
+        }
       });
 
       res.json({

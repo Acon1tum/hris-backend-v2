@@ -1,6 +1,5 @@
-import { PrismaClient, Permission, Status, Gender, CivilStatus, EmploymentType } from '@prisma/client';
+import { PrismaClient, Permission, Status, Gender, CivilStatus, EmploymentType, ApprovalStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import process from 'process';
 
 const prisma = new PrismaClient();
 
@@ -503,13 +502,14 @@ async function main() {
     const personalLeave = allLeaveTypes.find(lt => lt.leave_type_name === 'Personal Leave');
 
     const sampleApplications = [
+      // Recent and future applications
       {
         personnel_id: allPersonnel[0].id, // Admin
         leave_type_id: vacationLeave?.id || allLeaveTypes[0].id,
         start_date: new Date('2024-12-15'),
         end_date: new Date('2024-12-20'),
         total_days: 6,
-        status: 'Approved',
+        status: ApprovalStatus.Approved,
         reason: 'Year-end vacation with family'
       },
       {
@@ -518,7 +518,7 @@ async function main() {
         start_date: new Date('2024-11-25'),
         end_date: new Date('2024-11-26'),
         total_days: 2,
-        status: 'Approved',
+        status: ApprovalStatus.Approved,
         reason: 'Medical checkup and recovery',
         supporting_document: 'medical_certificate_nov2024.pdf'
       },
@@ -528,7 +528,7 @@ async function main() {
         start_date: new Date('2024-12-02'),
         end_date: new Date('2024-12-02'),
         total_days: 1,
-        status: 'Pending',
+        status: ApprovalStatus.Pending,
         reason: 'Personal appointment'
       },
       {
@@ -537,7 +537,7 @@ async function main() {
         start_date: new Date('2024-12-23'),
         end_date: new Date('2024-12-30'),
         total_days: 8,
-        status: 'Pending',
+        status: ApprovalStatus.Pending,
         reason: 'Christmas and New Year holiday'
       },
       {
@@ -546,7 +546,7 @@ async function main() {
         start_date: new Date('2024-10-15'),
         end_date: new Date('2024-10-16'),
         total_days: 2,
-        status: 'Rejected',
+        status: ApprovalStatus.Rejected,
         reason: 'Flu symptoms'
       },
       {
@@ -555,8 +555,96 @@ async function main() {
         start_date: new Date('2024-11-18'),
         end_date: new Date('2024-11-22'),
         total_days: 5,
-        status: 'Approved',
+        status: ApprovalStatus.Approved,
         reason: 'Wedding anniversary celebration'
+      },
+      // Additional diverse applications
+      {
+        personnel_id: allPersonnel[0].id, // Admin
+        leave_type_id: sickLeave?.id || allLeaveTypes[1].id,
+        start_date: new Date('2024-09-10'),
+        end_date: new Date('2024-09-12'),
+        total_days: 3,
+        status: ApprovalStatus.Approved,
+        reason: 'Recovery from minor surgery',
+        supporting_document: 'medical_certificate_sep2024.pdf'
+      },
+      {
+        personnel_id: allPersonnel[1].id, // HR Manager
+        leave_type_id: personalLeave?.id || allLeaveTypes[4].id,
+        start_date: new Date('2024-08-20'),
+        end_date: new Date('2024-08-20'),
+        total_days: 1,
+        status: ApprovalStatus.Approved,
+        reason: 'Attend child\'s school event'
+      },
+      {
+        personnel_id: allPersonnel[2].id, // Employee
+        leave_type_id: vacationLeave?.id || allLeaveTypes[0].id,
+        start_date: new Date('2024-07-15'),
+        end_date: new Date('2024-07-19'),
+        total_days: 5,
+        status: ApprovalStatus.Approved,
+        reason: 'Summer vacation with family'
+      },
+      {
+        personnel_id: allPersonnel.length > 3 ? allPersonnel[3].id : allPersonnel[0].id, // Finance Head or fallback
+        leave_type_id: sickLeave?.id || allLeaveTypes[1].id,
+        start_date: new Date('2024-06-25'),
+        end_date: new Date('2024-06-26'),
+        total_days: 2,
+        status: ApprovalStatus.Approved,
+        reason: 'Migraine and rest',
+        supporting_document: 'medical_certificate_june2024.pdf'
+      },
+      // Future applications (pending approval)
+      {
+        personnel_id: allPersonnel.length > 4 ? allPersonnel[4].id : allPersonnel[1].id, // Marketing Lead or fallback
+        leave_type_id: vacationLeave?.id || allLeaveTypes[0].id,
+        start_date: new Date('2025-01-15'),
+        end_date: new Date('2025-01-17'),
+        total_days: 3,
+        status: ApprovalStatus.Pending,
+        reason: 'Extended weekend trip'
+      },
+      {
+        personnel_id: allPersonnel.length > 5 ? allPersonnel[5].id : allPersonnel[2].id, // Operations Manager or fallback
+        leave_type_id: personalLeave?.id || allLeaveTypes[4].id,
+        start_date: new Date('2025-02-10'),
+        end_date: new Date('2025-02-10'),
+        total_days: 1,
+        status: ApprovalStatus.Pending,
+        reason: 'Legal appointment'
+      },
+      // Some rejected applications for variety
+      {
+        personnel_id: allPersonnel[0].id, // Admin
+        leave_type_id: vacationLeave?.id || allLeaveTypes[0].id,
+        start_date: new Date('2024-05-20'),
+        end_date: new Date('2024-05-24'),
+        total_days: 5,
+        status: ApprovalStatus.Rejected,
+        reason: 'Vacation during peak season'
+      },
+      {
+        personnel_id: allPersonnel[1].id, // HR Manager
+        leave_type_id: personalLeave?.id || allLeaveTypes[4].id,
+        start_date: new Date('2024-04-15'),
+        end_date: new Date('2024-04-17'),
+        total_days: 3,
+        status: ApprovalStatus.Rejected,
+        reason: 'Personal matters - conflicting schedule'
+      },
+      // Emergency leave applications
+      {
+        personnel_id: allPersonnel[2].id, // Employee
+        leave_type_id: sickLeave?.id || allLeaveTypes[1].id,
+        start_date: new Date('2024-03-05'),
+        end_date: new Date('2024-03-07'),
+        total_days: 3,
+        status: ApprovalStatus.Approved,
+        reason: 'Family emergency - hospitalization',
+        supporting_document: 'hospital_admission_mar2024.pdf'
       }
     ];
 
@@ -584,7 +672,7 @@ async function main() {
         });
 
         // Update leave balance if approved
-        if (app.status === 'Approved') {
+        if (app.status === ApprovalStatus.Approved) {
           await prisma.leaveBalance.updateMany({
             where: {
               personnel_id: app.personnel_id,
@@ -672,21 +760,22 @@ async function main() {
   console.log('\n📊 Leave data created:');
   console.log(`✅ ${allLeaveTypes.length} leave types`);
   console.log(`✅ ${allPersonnel.length * allLeaveTypes.length} leave balances for ${currentYear}`);
-  console.log('✅ 6 sample leave applications (Approved, Pending, Rejected)');
+  console.log('✅ 15 sample leave applications (Approved, Pending, Rejected)');
   console.log('✅ 3 sample leave monetization requests');
   console.log('\n🔍 Sample leave data includes:');
-  console.log('• Admin: Approved vacation (Dec 15-20), Approved monetization (5 days)');
-  console.log('• HR Manager: Approved sick leave (Nov 25-26), Pending monetization (3 days)');
-  console.log('• Employee: Pending personal leave (Dec 2)');
-  console.log('• Finance Head: Pending vacation (Dec 23-30), Rejected monetization (7 days)');
-  console.log('• Marketing Lead: Rejected sick leave (Oct 15-16)');
-  console.log('• Operations Manager: Approved vacation (Nov 18-22)');
+  console.log('• 9 Approved applications across all employees');
+  console.log('• 4 Pending applications for future dates');
+  console.log('• 2 Rejected applications for reference');
+  console.log('• Applications spanning from March 2024 to February 2025');
+  console.log('• Supporting documents for medical/emergency leaves');
+  console.log('• Diverse leave types: Vacation, Sick, Personal');
+  console.log('• Realistic leave scenarios: vacations, medical, emergencies, personal events');
 }
 
 main()
   .catch((e) => {
     console.error('❌ Error during seeding:', e);
-    process.exit(1);
+    throw e;
   })
   .finally(async () => {
     await prisma.$disconnect();

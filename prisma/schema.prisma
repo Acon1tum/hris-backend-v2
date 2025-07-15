@@ -537,6 +537,7 @@ model User {
   personnel_schedules PersonnelSchedule[]
   approved_by_user DtrAdjustmentRequest[]
   leave_approved_by_user LeaveMonetization[]
+  leave_application_approved_by_user LeaveApplication[] @relation("LeaveApplicationApprovedBy")
   overtime_approved_by_user OvertimeRequest[]
   issued_by_user PersonnelMovement[]
   documented_by_user MeritViolation[]
@@ -753,8 +754,12 @@ model LeaveApplication {
   reason              String?
   supporting_document String?
   request_date        DateTime    @default(now())
+  approved_by         String?
+  approval_date       DateTime?
+  approval_comments   String?
   personnel           Personnel   @relation(fields: [personnel_id], references: [id])
   leave_type          LeaveType   @relation(fields: [leave_type_id], references: [id])
+  approved_by_user    User?       @relation("LeaveApplicationApprovedBy", fields: [approved_by], references: [id])
 }
 
 model LeaveMonetization {
