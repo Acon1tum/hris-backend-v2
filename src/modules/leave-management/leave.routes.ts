@@ -142,4 +142,24 @@ router.get('/reports/balance',
   LeaveController.getLeaveBalanceReport
 );
 
+// ==================== LEAVE CREDIT ADJUSTMENTS ====================
+
+// POST /api/leave-management/adjustments - Create leave credit adjustment
+router.post('/adjustments', 
+  requirePermission('leave_balance_update'), 
+  LeaveController.createLeaveAdjustment
+);
+
+// GET /api/leave-management/adjustments - Get leave credit adjustments
+router.get('/adjustments', 
+  requirePermission('leave_balance_read'), 
+  LeaveController.getLeaveAdjustments
+);
+
+// GET /api/leave-management/adjustments/:personnel_id - Get adjustments for specific personnel
+router.get('/adjustments/:personnel_id', 
+  requirePermission('leave_balance_read'), 
+  LeaveController.getPersonnelAdjustments
+);
+
 export { router as leaveRoutes }; 

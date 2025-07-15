@@ -546,6 +546,7 @@ model User {
   created_by_user JobPosting[]
   user JobApplicant[]
   training_created_by_user TrainingProgram[]
+  leave_adjustments_created_by_user LeaveAdjustment[] @relation("LeaveAdjustmentCreatedBy")
 }
 
 model Role {
@@ -645,6 +646,7 @@ model Personnel {
   employeeDocuments         EmployeeDocument[]
   courses_instructed        Course[]
   course_enrollments        CourseEnrollment[]
+  leave_adjustments         LeaveAdjustment[]
 }
 
 model EmploymentHistory {
@@ -727,6 +729,7 @@ model LeaveType {
   leave_balances      LeaveBalance[]
   leave_applications  LeaveApplication[]
   leave_monetization  LeaveMonetization[]
+  leave_adjustments   LeaveAdjustment[]
 }
 
 model LeaveBalance {
@@ -741,6 +744,23 @@ model LeaveBalance {
   personnel           Personnel   @relation(fields: [personnel_id], references: [id])
   leave_type          LeaveType   @relation(fields: [leave_type_id], references: [id])
   @@unique([personnel_id, leave_type_id, year])
+}
+
+model LeaveAdjustment {
+  id                  String   @id @default(uuid())
+  personnel_id        String
+  leave_type_id       String
+  year                String
+  adjustment_type     String   // "increase" or "decrease"
+  adjustment_amount   Float
+  reason              String
+  previous_balance    Float
+  new_balance         Float
+  created_by          String
+  created_at          DateTime @default(now())
+  personnel           Personnel @relation(fields: [personnel_id], references: [id])
+  leave_type          LeaveType @relation(fields: [leave_type_id], references: [id])
+  created_by_user     User     @relation("LeaveAdjustmentCreatedBy", fields: [created_by], references: [id])
 }
 
 model LeaveApplication {

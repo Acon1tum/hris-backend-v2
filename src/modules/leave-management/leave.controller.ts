@@ -995,4 +995,267 @@ export class LeaveController {
       throw new CustomError('Failed to generate leave balance report', 500);
     }
   }
+
+  // ==================== LEAVE CREDIT ADJUSTMENTS ====================
+
+  // POST /api/leave-management/adjustments - Create leave credit adjustment
+  static async createLeaveAdjustment(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { personnel_id, leave_type_id, year, adjustment_type, adjustment_amount, reason } = req.body;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new CustomError('Unauthorized', 401);
+      }
+
+      // Validate required fields
+      if (!personnel_id || !leave_type_id || !year || !adjustment_type || !adjustment_amount || !reason) {
+        throw new CustomError('Missing required fields', 400);
+      }
+
+      // Validate adjustment type
+      if (!['increase', 'decrease'].includes(adjustment_type)) {
+        throw new CustomError('Invalid adjustment type. Must be "increase" or "decrease"', 400);
+      }
+
+      // Validate adjustment amount
+      if (adjustment_amount <= 0) {
+        throw new CustomError('Adjustment amount must be greater than 0', 400);
+      }
+
+      // Get current leave balance
+      const currentBalance = await prisma.leaveBalance.findUnique({
+        where: {
+          personnel_id_leave_type_id_year: {
+            personnel_id,
+            leave_type_id,
+            year
+          }
+        },
+        include: {
+          personnel: {
+            select: {
+              first_name: true,
+              last_name: true
+            }
+          },
+          leave_type: {
+            select: {
+              leave_type_name: true
+            }
+          }
+        }
+      });
+
+      if (!currentBalance) {
+        throw new CustomError('Leave balance not found for the specified personnel, leave type, and year', 404);
+      }
+
+      const previousBalance = currentBalance.total_credits;
+      let newBalance: number;
+
+      if (adjustment_type === 'increase') {
+        newBalance = previousBalance + adjustment_amount;
+      } else {
+        newBalance = previousBalance - adjustment_amount;
+        if (newBalance < 0) {
+          throw new CustomError('Adjustment would result in negative balance', 400);
+        }
+      }
+
+      // Create adjustment record and update balance in a transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // Create adjustment record
+        const adjustment = await tx.leaveAdjustment.create({
+          data: {
+            personnel_id,
+            leave_type_id,
+            year,
+            adjustment_type,
+            adjustment_amount,
+            reason,
+            previous_balance: previousBalance,
+            new_balance: newBalance,
+            created_by: userId
+          },
+          include: {
+            personnel: {
+              select: {
+                first_name: true,
+                last_name: true
+              }
+            },
+            leave_type: {
+              select: {
+                leave_type_name: true
+              }
+            },
+            created_by_user: {
+              select: {
+                username: true
+              }
+            }
+          }
+        });
+
+        // Update leave balance
+        await tx.leaveBalance.update({
+          where: {
+            personnel_id_leave_type_id_year: {
+              personnel_id,
+              leave_type_id,
+              year
+            }
+          },
+          data: {
+            total_credits: newBalance,
+            last_updated: new Date()
+          }
+        });
+
+        return adjustment;
+      });
+
+      res.status(201).json({
+        success: true,
+        data: result,
+        message: 'Leave credit adjustment created successfully'
+      });
+    } catch (error: any) {
+      console.error('Error creating leave adjustment:', error);
+      
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      
+      throw new CustomError('Failed to create leave adjustment', 500);
+    }
+  }
+
+  // GET /api/leave-management/adjustments - Get leave credit adjustments
+  static async getLeaveAdjustments(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { 
+        personnel_id, 
+        leave_type_id, 
+        year, 
+        adjustment_type,
+        page = 1, 
+        limit = 10 
+      } = req.query;
+
+      const where: any = {};
+      
+      if (personnel_id) where.personnel_id = personnel_id;
+      if (leave_type_id) where.leave_type_id = leave_type_id;
+      if (year) where.year = year;
+      if (adjustment_type) where.adjustment_type = adjustment_type;
+
+      const skip = (Number(page) - 1) * Number(limit);
+      const take = Number(limit);
+
+      const [adjustments, total] = await Promise.all([
+        prisma.leaveAdjustment.findMany({
+          where,
+          include: {
+            personnel: {
+              select: {
+                first_name: true,
+                last_name: true,
+                department: {
+                  select: {
+                    department_name: true
+                  }
+                }
+              }
+            },
+            leave_type: {
+              select: {
+                leave_type_name: true
+              }
+            },
+            created_by_user: {
+              select: {
+                username: true
+              }
+            }
+          },
+          skip,
+          take,
+          orderBy: {
+            created_at: 'desc'
+          }
+        }),
+        prisma.leaveAdjustment.count({ where })
+      ]);
+
+      res.json({
+        success: true,
+        data: adjustments,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          totalPages: Math.ceil(total / Number(limit))
+        },
+        message: 'Leave adjustments fetched successfully'
+      });
+    } catch (error: any) {
+      console.error('Error fetching leave adjustments:', error);
+      throw new CustomError('Failed to fetch leave adjustments', 500);
+    }
+  }
+
+  // GET /api/leave-management/adjustments/:personnel_id - Get adjustments for specific personnel
+  static async getPersonnelAdjustments(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { personnel_id } = req.params;
+      const { year = new Date().getFullYear().toString(), page = 1, limit = 10 } = req.query;
+
+      const where: any = { personnel_id };
+      if (year) where.year = year;
+
+      const skip = (Number(page) - 1) * Number(limit);
+      const take = Number(limit);
+
+      const [adjustments, total] = await Promise.all([
+        prisma.leaveAdjustment.findMany({
+          where,
+          include: {
+            leave_type: {
+              select: {
+                leave_type_name: true
+              }
+            },
+            created_by_user: {
+              select: {
+                username: true
+              }
+            }
+          },
+          skip,
+          take,
+          orderBy: {
+            created_at: 'desc'
+          }
+        }),
+        prisma.leaveAdjustment.count({ where })
+      ]);
+
+      res.json({
+        success: true,
+        data: adjustments,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          totalPages: Math.ceil(total / Number(limit))
+        },
+        message: 'Personnel adjustments fetched successfully'
+      });
+    } catch (error: any) {
+      console.error('Error fetching personnel adjustments:', error);
+      throw new CustomError('Failed to fetch personnel adjustments', 500);
+    }
+  }
 } 
