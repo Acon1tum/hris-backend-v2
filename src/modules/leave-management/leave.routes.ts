@@ -64,7 +64,7 @@ router.put('/applications/:id/reject',
 
 // ==================== LEAVE TYPES ====================
 
-// GET /api/leave-management/types - Get all active leave types
+// GET /api/leave-management/types - Get all leave types
 router.get('/types', 
   requirePermission('leave_type_read'), 
   LeaveController.getLeaveTypes
@@ -82,7 +82,7 @@ router.put('/types/:id',
   LeaveController.updateLeaveType
 );
 
-// DELETE /api/leave-management/types/:id - Deactivate leave type
+// DELETE /api/leave-management/types/:id - Delete leave type
 router.delete('/types/:id', 
   requirePermission('leave_type_delete'), 
   LeaveController.deleteLeaveType

@@ -438,11 +438,10 @@ export class LeaveController {
 
   // ==================== LEAVE TYPES ====================
 
-  // GET /api/leave-management/types - Get all active leave types
+  // GET /api/leave-management/types - Get all leave types
   static async getLeaveTypes(req: Request, res: Response) {
     try {
       const leaveTypes = await prisma.leaveType.findMany({
-        where: { is_active: true },
         orderBy: { leave_type_name: 'asc' }
       });
 
@@ -526,24 +525,47 @@ export class LeaveController {
     }
   }
 
-  // DELETE /api/leave-management/types/:id - Deactivate leave type
+  // DELETE /api/leave-management/types/:id - Delete leave type
   static async deleteLeaveType(req: Request, res: Response) {
     try {
       const { id } = req.params;
 
-      const leaveType = await prisma.leaveType.update({
-        where: { id },
-        data: { is_active: false }
+      // Check if leave type is being used in any leave applications
+      const existingApplications = await prisma.leaveApplication.findFirst({
+        where: { leave_type_id: id }
+      });
+
+      if (existingApplications) {
+        throw new CustomError('Cannot delete leave type that is being used in leave applications', 400);
+      }
+
+      // Check if leave type is being used in any leave balances
+      const existingBalances = await prisma.leaveBalance.findFirst({
+        where: { leave_type_id: id }
+      });
+
+      if (existingBalances) {
+        throw new CustomError('Cannot delete leave type that has associated leave balances', 400);
+      }
+
+      const leaveType = await prisma.leaveType.delete({
+        where: { id }
       });
 
       res.json({
         success: true,
         data: leaveType,
-        message: 'Leave type deactivated successfully'
+        message: 'Leave type deleted successfully'
       });
     } catch (error: any) {
-      console.error('Error deactivating leave type:', error);
-      throw new CustomError('Failed to deactivate leave type', 500);
+      console.error('Error deleting leave type:', error);
+      if (error.code === 'P2003') {
+        throw new CustomError('Cannot delete leave type that is referenced by other records', 400);
+      }
+      if (error.message.includes('Cannot delete leave type')) {
+        throw new CustomError(error.message, 400);
+      }
+      throw new CustomError('Failed to delete leave type', 500);
     }
   }
 
