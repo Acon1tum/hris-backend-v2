@@ -1,7 +1,39 @@
-import { PrismaClient, Permission, Status, Gender, CivilStatus, EmploymentType, ApprovalStatus } from '@prisma/client';
+import { PrismaClient, Permission, Status, Gender, CivilStatus, EmploymentType, PostingStatus, ApprovalStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
+
+// Helper function to pick only allowed fields
+function pickJobPostingFields(job) {
+  return {
+    position_title: job.position_title,
+    department_id: job.department_id,
+    job_description: job.job_description,
+    qualifications: job.qualifications,
+    technical_competencies: job.technical_competencies,
+    salary_range: job.salary_range,
+    employment_type: job.employment_type,
+    num_vacancies: job.num_vacancies,
+    application_deadline: job.application_deadline,
+    posting_status: job.posting_status,
+    created_by: job.created_by
+  };
+}
+
+function pickJobApplicantFields(applicant) {
+  return {
+    first_name: applicant.first_name,
+    last_name: applicant.last_name,
+    middle_name: applicant.middle_name,
+    email: applicant.email,
+    phone: applicant.phone,
+    current_employer: applicant.current_employer,
+    highest_education: applicant.highest_education,
+    resume_path: applicant.resume_path,
+    is_existing_employee: applicant.is_existing_employee,
+    application_date: applicant.application_date
+  };
+}
 
 async function main() {
   console.log('🌱 Starting database seeding...');
@@ -452,6 +484,114 @@ async function main() {
 
   console.log('✅ Leave types created');
 
+  // --- Sample Job Postings ---
+  const sampleJobs = [
+    {
+      position_title: 'Software Engineer',
+      department_id: createdDepartments['Information Technology'],
+      job_description: 'Develop and maintain web applications.',
+      qualifications: 'BS Computer Science or related, 2+ years experience.',
+      technical_competencies: 'Node.js, Angular, PostgreSQL',
+      salary_range: '45000-70000',
+      employment_type: EmploymentType.Regular,
+      num_vacancies: 2,
+      application_deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      posting_status: PostingStatus.Published,
+      created_by: adminUser.id
+    },
+    {
+      position_title: 'HR Assistant',
+      department_id: createdDepartments['Human Resources'],
+      job_description: 'Assist with HR operations and recruitment.',
+      qualifications: 'BS Psychology or HRDM, 1+ year experience.',
+      technical_competencies: 'MS Office, Communication',
+      salary_range: '25000-35000',
+      employment_type: EmploymentType.Contractual,
+      num_vacancies: 1,
+      application_deadline: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
+      posting_status: PostingStatus.Published,
+      created_by: hrUser.id
+    },
+    {
+      position_title: 'Finance Analyst',
+      department_id: createdDepartments['Finance'],
+      job_description: 'Analyze financial data and prepare reports.',
+      qualifications: 'BS Accountancy, CPA preferred.',
+      technical_competencies: 'Excel, SAP',
+      salary_range: '30000-50000',
+      employment_type: EmploymentType.Regular,
+      num_vacancies: 1,
+      application_deadline: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+      posting_status: PostingStatus.Draft,
+      created_by: adminUser.id
+    }
+  ];
+
+  const createdJobs: { id: string }[] = [];
+  for (const job of sampleJobs) {
+    const created = await prisma.jobPosting.create({
+      data: pickJobPostingFields(job)
+    });
+    createdJobs.push(created);
+  }
+  console.log('✅ Sample job postings created');
+
+  // --- Sample Job Applicants ---
+  const sampleApplicants = [
+    {
+      first_name: 'Alice',
+      last_name: 'Garcia',
+      middle_name: 'Lopez',
+      email: 'alice.garcia@email.com',
+      phone: '+639171234567',
+      current_employer: 'ABC Corp',
+      highest_education: 'BS Computer Science',
+      resume_path: null,
+      is_existing_employee: false,
+      application_date: new Date()
+    },
+    {
+      first_name: 'Bob',
+      last_name: 'Reyes',
+      middle_name: 'Santos',
+      email: 'bob.reyes@email.com',
+      phone: '+639182345678',
+      current_employer: 'XYZ Inc',
+      highest_education: 'BS Psychology',
+      resume_path: null,
+      is_existing_employee: false,
+      application_date: new Date()
+    }
+  ];
+
+  const createdApplicants: { id: string }[] = [];
+  for (const applicant of sampleApplicants) {
+    const created = await prisma.jobApplicant.create({
+      data: pickJobApplicantFields(applicant)
+    });
+    createdApplicants.push(created);
+  }
+  console.log('✅ Sample job applicants created');
+
+  // --- Sample Job Applications ---
+  if (createdJobs.length > 0 && createdApplicants.length > 0) {
+    await prisma.jobApplication.create({
+      data: {
+        position_id: createdJobs[0].id,
+        applicant_id: createdApplicants[0].id,
+        cover_letter: 'I am excited to apply for the Software Engineer position.'
+      }
+    });
+    await prisma.jobApplication.create({
+      data: {
+        position_id: createdJobs[1].id,
+        applicant_id: createdApplicants[1].id,
+        cover_letter: 'Looking forward to joining your HR team.'
+      }
+    });
+    console.log('✅ Sample job applications created');
+  }
+
   // Get all personnel and leave types for creating balances and applications
   const allPersonnel = await prisma.personnel.findMany();
   const allLeaveTypes = await prisma.leaveType.findMany();
@@ -775,8 +915,18 @@ async function main() {
 main()
   .catch((e) => {
     console.error('❌ Error during seeding:', e);
-    throw e;
+    // @ts-ignore
+    process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
-  }); 
+  });
+
+// ---
+// How to verify your data after seeding:
+// 1. Run: npx prisma db seed
+// 2. Use Prisma Studio: npx prisma studio
+//    - Check JobPosting, JobApplicant, and JobApplication tables for sample data
+// 3. Or use your Postman/HTTP client to hit your backend endpoints
+// --- 
+  

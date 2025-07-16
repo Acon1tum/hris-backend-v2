@@ -387,3 +387,56 @@ The Personnel 201 File component uses these endpoints:
 ### Available Scripts
 
 ```
+```
+
+### Online Job Application Portal Backend API Checklist
+
+All endpoints below are implemented and available:
+
+#### Applicant Authentication & Profile
+| Method | Endpoint                                    | Description                                  |
+|--------|---------------------------------------------|----------------------------------------------|
+| POST   | `/api/job-portal/register`                  | Register a new external applicant            |
+| POST   | `/api/job-portal/login`                     | Applicant login (returns JWT)                |
+| GET    | `/api/job-portal/profile`                   | Get applicant profile (protected)            |
+| PUT    | `/api/job-portal/profile`                   | Update applicant profile (protected)         |
+| GET    | `/api/job-portal/profile/completion-status` | Check if profile is complete                 |
+
+#### Job Listings
+| Method | Endpoint                                    | Description                                  |
+|--------|---------------------------------------------|----------------------------------------------|
+| GET    | `/api/job-portal/jobs`                      | List all published job openings              |
+| GET    | `/api/job-portal/jobs/:id`                  | Get details of a specific job                |
+
+#### Job Application Process
+| Method | Endpoint                                    | Description                                  |
+|--------|---------------------------------------------|----------------------------------------------|
+| POST   | `/api/job-portal/applications`              | Start a new job application                  |
+| POST   | `/api/job-portal/applications/:id/upload`   | Upload required documents (resume, CSC, etc) |
+| PUT    | `/api/job-portal/applications/:id/answers`  | Submit answers to application questions      |
+| POST   | `/api/job-portal/applications/:id/submit`   | Submit the completed application             |
+
+#### Application Summary & Status
+| Method | Endpoint                                    | Description                                  |
+|--------|---------------------------------------------|----------------------------------------------|
+| GET    | `/api/job-portal/applications`              | List all applications by applicant           |
+| GET    | `/api/job-portal/applications/:id`          | Get summary/status of a specific application |
+
+#### Edit/Cancel Application
+| Method | Endpoint                                    | Description                                  |
+|--------|---------------------------------------------|----------------------------------------------|
+| PUT    | `/api/job-portal/applications/:id`          | Edit application (before deadline)           |
+| DELETE | `/api/job-portal/applications/:id`          | Cancel application (before deadline)         |
+
+#### Notifications
+| Method | Endpoint                                    | Description                                  |
+|--------|---------------------------------------------|----------------------------------------------|
+| POST   | `/api/job-portal/notifications`             | Notify applicant of submission status        |
+
+---
+**Notes:**
+- All `/profile` and `/applications` endpoints require applicant authentication (JWT).
+- File uploads are currently handled via base64 or file path in the request body (see endpoint docs below).
+- Add pagination, filtering, and validation as needed.
+
+---
