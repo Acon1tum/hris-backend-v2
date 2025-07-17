@@ -710,8 +710,21 @@ async function main() {
 
   const createdApplicants: { id: string }[] = [];
   for (const applicant of sampleApplicants) {
+    const user = await prisma.user.create({
+      data: {
+        username: applicant.email.split('@')[0], // or any unique username logic
+        email: applicant.email,
+        password_hash: await bcrypt.hash('Applicant123!', 12),
+        status: Status.Active,
+        // ...other user fields as needed
+      }
+    });
+
     const created = await prisma.jobApplicant.create({
-      data: pickJobApplicantFields(applicant)
+      data: {
+        ...pickJobApplicantFields(applicant),
+        user: { connect: { id: user.id } }
+      }
     });
     createdApplicants.push(created);
   }
