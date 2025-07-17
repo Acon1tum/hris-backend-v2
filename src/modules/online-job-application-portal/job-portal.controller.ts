@@ -1,15 +1,50 @@
 import { Request, Response } from 'express';
 import { PrismaClient, ApplicationStatus, PostingStatus } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
 
 class JobPortalController {
-  // Applicant Authentication & Profile
+  // Applicant Registration
   async register(req: Request, res: Response) {
     try {
-      const { first_name, last_name, middle_name, email, phone, current_employer, highest_education } = req.body;
+      const { first_name, last_name, middle_name, email, phone, current_employer, highest_education, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ success: false, message: 'Email and password are required' });
+      }
+      // Check if user already exists
+      const existingUser = await prisma.user.findUnique({ where: { email } });
+      if (existingUser) {
+        return res.status(400).json({ success: false, message: 'Email already registered' });
+      }
+      // Hash password
+      const password_hash = await bcrypt.hash(password, 10);
+      // Create user with role 'applicant'
+      const user = await prisma.user.create({
+        data: {
+          username: email,
+          email,
+          password_hash,
+          status: 'Active',
+          user_roles: {
+            create: [{ role: { connect: { name: 'applicant' } } }]
+          }
+        },
+        include: { user_roles: true }
+      });
+      // Create JobApplicant linked to user
       const applicant = await prisma.jobApplicant.create({
-        data: { first_name, last_name, middle_name, email, phone, current_employer, highest_education }
+        data: {
+          user_id: user.id,
+          first_name,
+          last_name,
+          middle_name,
+          email,
+          phone,
+          current_employer,
+          highest_education
+        }
       });
       return res.json({ success: true, data: applicant });
     } catch (error: any) {
@@ -17,14 +52,29 @@ class JobPortalController {
     }
   }
 
+  // Applicant Login
   async login(req: Request, res: Response) {
     try {
-      const { email, phone } = req.body;
-      const applicant = await prisma.jobApplicant.findFirst({
-        where: { OR: [{ email }, { phone }] }
-      });
-      if (!applicant) return res.status(404).json({ success: false, message: 'Applicant not found' });
-      return res.json({ success: true, data: applicant });
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ success: false, message: 'Email and password are required' });
+      }
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      const valid = await bcrypt.compare(password, user.password_hash);
+      if (!valid) {
+        return res.status(401).json({ success: false, message: 'Invalid password' });
+      }
+      // Find applicant profile
+      const applicant = await prisma.jobApplicant.findFirst({ where: { user_id: user.id } });
+      if (!applicant) {
+        return res.status(404).json({ success: false, message: 'Applicant profile not found' });
+      }
+      // Generate JWT
+      const token = jwt.sign({ userId: user.id, role: 'applicant' }, process.env.JWT_SECRET || 'secret', { expiresIn: '1d' });
+      return res.json({ success: true, token, data: applicant });
     } catch (error: any) {
       return res.status(400).json({ success: false, message: 'Login failed', error: error.message });
     }

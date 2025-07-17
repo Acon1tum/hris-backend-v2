@@ -936,7 +936,7 @@ model JobPosting {
 
 model JobApplicant {
   id                  String   @id @default(uuid())
-  user_id             String?
+  user_id             String   // Now required, links to User
   first_name          String
   last_name           String
   middle_name         String?
@@ -947,7 +947,7 @@ model JobApplicant {
   resume_path         String?
   is_existing_employee Boolean     @default(false)
   application_date    DateTime    @default(now())
-  user                User?       @relation(fields: [user_id], references: [id])
+  user                User        @relation(fields: [user_id], references: [id])
   job_applications    JobApplication[]
 }
 
