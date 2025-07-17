@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 export class LeaveController {
   // ==================== LEAVE APPLICATIONS ====================
   
-  // GET /api/leave-management/applications - Get leave applications with filters
+  // GET /api/leave/applications - Get leave applications with filters
   static async getLeaveApplications(req: AuthenticatedRequest, res: Response) {
     try {
       const { 
@@ -92,7 +92,7 @@ export class LeaveController {
     }
   }
 
-  // GET /api/leave-management/applications/my - Get logged-in user's leave applications
+  // GET /api/leave/applications/my - Get logged-in user's leave applications
   static async getMyLeaveApplications(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id;
@@ -130,7 +130,7 @@ export class LeaveController {
     }
   }
 
-  // GET /api/leave-management/applications/pending - Get pending applications
+  // GET /api/leave/applications/pending - Get pending applications
   static async getPendingApplications(req: AuthenticatedRequest, res: Response) {
     try {
       const applications = await prisma.leaveApplication.findMany({
@@ -167,7 +167,7 @@ export class LeaveController {
     }
   }
 
-  // POST /api/leave-management/applications - Create leave application
+  // POST /api/leave/applications - Create leave application
   static async createLeaveApplication(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id;
@@ -229,7 +229,7 @@ export class LeaveController {
     }
   }
 
-  // PUT /api/leave-management/applications/:id - Update leave application
+  // PUT /api/leave/applications/:id - Update leave application
   static async updateLeaveApplication(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
@@ -305,7 +305,7 @@ export class LeaveController {
     }
   }
 
-  // DELETE /api/leave-management/applications/:id - Cancel leave application
+  // DELETE /api/leave/applications/:id - Cancel leave application
   static async cancelLeaveApplication(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
@@ -351,7 +351,7 @@ export class LeaveController {
     }
   }
 
-  // PUT /api/leave-management/applications/:id/approve - Approve leave application
+  // PUT /api/leave/applications/:id/approve - Approve leave application
   static async approveLeaveApplication(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
@@ -411,7 +411,7 @@ export class LeaveController {
     }
   }
 
-  // PUT /api/leave-management/applications/:id/reject - Reject leave application
+  // PUT /api/leave/applications/:id/reject - Reject leave application
   static async rejectLeaveApplication(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
@@ -452,7 +452,7 @@ export class LeaveController {
 
   // ==================== LEAVE TYPES ====================
 
-  // GET /api/leave-management/types - Get all leave types
+  // GET /api/leave/types - Get all leave types
   static async getLeaveTypes(req: Request, res: Response) {
     try {
       const leaveTypes = await prisma.leaveType.findMany({
@@ -470,7 +470,7 @@ export class LeaveController {
     }
   }
 
-  // POST /api/leave-management/types - Create leave type
+  // POST /api/leave/types - Create leave type
   static async createLeaveType(req: Request, res: Response) {
     try {
       const {
@@ -505,7 +505,7 @@ export class LeaveController {
     }
   }
 
-  // PUT /api/leave-management/types/:id - Update leave type
+  // PUT /api/leave/types/:id - Update leave type
   static async updateLeaveType(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -539,7 +539,7 @@ export class LeaveController {
     }
   }
 
-  // DELETE /api/leave-management/types/:id - Delete leave type
+  // DELETE /api/leave/types/:id - Delete leave type
   static async deleteLeaveType(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -585,7 +585,7 @@ export class LeaveController {
 
   // ==================== LEAVE BALANCE ====================
 
-  // GET /api/leave-management/balance/my - Get logged-in user's leave balance
+  // GET /api/leave/balance/my - Get logged-in user's leave balance
   static async getMyLeaveBalance(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id;
@@ -630,7 +630,7 @@ export class LeaveController {
     }
   }
 
-  // GET /api/leave-management/balance/:personnel_id - Get personnel's leave balance
+  // GET /api/leave/balance/:personnel_id - Get personnel's leave balance
   static async getPersonnelLeaveBalance(req: Request, res: Response) {
     try {
       const { personnel_id } = req.params;
@@ -668,7 +668,7 @@ export class LeaveController {
     }
   }
 
-  // POST /api/leave-management/balance/initialize - Initialize leave balances
+  // POST /api/leave/balance/initialize - Initialize leave balances
   static async initializeLeaveBalance(req: Request, res: Response) {
     try {
       const { personnel_id, year, leave_type_id, total_credits } = req.body;
@@ -721,7 +721,7 @@ export class LeaveController {
 
   // ==================== LEAVE MONETIZATION ====================
 
-  // GET /api/leave-management/monetization - Get leave monetization requests
+  // GET /api/leave/monetization - Get leave monetization requests
   static async getLeaveMonetization(req: Request, res: Response) {
     try {
       const { status, personnel_id, page = 1, limit = 10 } = req.query;
@@ -774,7 +774,7 @@ export class LeaveController {
     }
   }
 
-  // POST /api/leave-management/monetization - Create leave monetization request
+  // POST /api/leave/monetization - Create leave monetization request
   static async createLeaveMonetization(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id;
@@ -820,7 +820,7 @@ export class LeaveController {
     }
   }
 
-  // PUT /api/leave-management/monetization/:id/approve - Approve leave monetization
+  // PUT /api/leave/monetization/:id/approve - Approve leave monetization
   static async approveLeaveMonetization(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
@@ -863,7 +863,7 @@ export class LeaveController {
 
   // ==================== LEAVE REPORTS ====================
 
-  // GET /api/leave-management/reports/summary - Get leave summary report
+  // GET /api/leave/reports/summary - Get leave summary report
   static async getLeaveSummaryReport(req: Request, res: Response) {
     try {
       const { 
@@ -938,7 +938,7 @@ export class LeaveController {
     }
   }
 
-  // GET /api/leave-management/reports/balance - Get leave balance report
+  // GET /api/leave/reports/balance - Get leave balance report
   static async getLeaveBalanceReport(req: Request, res: Response) {
     try {
       const { department_id, year = new Date().getFullYear().toString() } = req.query;
@@ -998,7 +998,7 @@ export class LeaveController {
 
   // ==================== LEAVE CREDIT ADJUSTMENTS ====================
 
-  // POST /api/leave-management/adjustments - Create leave credit adjustment
+  // POST /api/leave/adjustments - Create leave credit adjustment
   static async createLeaveAdjustment(req: AuthenticatedRequest, res: Response) {
     try {
       const { personnel_id, leave_type_id, year, adjustment_type, adjustment_amount, reason } = req.body;
@@ -1132,7 +1132,7 @@ export class LeaveController {
     }
   }
 
-  // GET /api/leave-management/adjustments - Get leave credit adjustments
+  // GET /api/leave/adjustments - Get leave credit adjustments
   static async getLeaveAdjustments(req: AuthenticatedRequest, res: Response) {
     try {
       const { 
@@ -1206,7 +1206,7 @@ export class LeaveController {
     }
   }
 
-  // GET /api/leave-management/adjustments/:personnel_id - Get adjustments for specific personnel
+  // GET /api/leave/adjustments/:personnel_id - Get adjustments for specific personnel
   static async getPersonnelAdjustments(req: AuthenticatedRequest, res: Response) {
     try {
       const { personnel_id } = req.params;
